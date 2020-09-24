@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimal-ui">
+    <title>Валидационный отчет AutoWoE</title>
+</head>
+<style>
+    table,
+    th,
+    td {
+        border: 1px solid black;
+        border-collapse: collapse;
+        padding: 5px;
+    }
+
+    /* Remove default bullets */
+    ul,
+    #myUL {
+        list-style-type: none;
+    }
+
+    /* Remove margins and padding from the parent ul */
+    #myUL {
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Style the caret/arrow */
+    .caret {
+        cursor: pointer;
+        user-select: none;
+        /* Prevent text selection */
+    }
+
+    /* Create the caret/arrow with a unicode, and style it */
+    .caret::before {
+        content: "\25B6";
+        color: black;
+        display: inline-block;
+        margin-right: 6px;
+    }
+
+    /* Rotate the caret/arrow icon when clicked on (using JavaScript) */
+    .caret-down::before {
+        transform: rotate(90deg);
+    }
+
+    /* Hide the nested list */
+    .nested {
+        display: none;
+    }
+
+    /* Show the nested list when the user clicks on the caret/arrow (with JavaScript) */
+    .active {
+        display: block;
+    }
+</style>
+<script src="shap.js"></script>
+
+<body>
+    <div>
+        <h1>ПУБЛИЧНОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО «СБЕРБАНК РОССИИ»</h1>
+        <hr>
+        <h2>{{ report_name }}</h2>
+        <h3>Версия отчета: {{ report_version }}</h3>
+        <h3>{{ city }}, {{ year }}</h3>
+        <hr>
+    </div>
+    <!--
+    <div>
+        <h2>Оглавление</h2>
+        <ul style="list-style-type:disc;">
+            <li>
+                <a href="#section1">1. Общие положения</a>
+                <ul style="list-style-type:circle;">
+                    <li><a href="#section1_1">1.1. Цель документа</a></li>
+                    <li><a href="#section1_2">1.2. Цели и задачи, для которых требуется построение модели</a></li>
+                    <li><a href="#section1_3">1.3. Структура документа</a></li>
+                    <li><a href="#section1_4">1.4. Сводная информация по модели</a></li>
+                </ul>
+            </li>
+            <li>
+                <a href="#section2">2. Структура модели</a>
+                <ul style="list-style-type:circle;">
+                    <li><a href="#section2_1">2.1. Коэффициенты регрессионной модели</a></li>
+                    <li><a href="#section2_2">2.2. Разбиение признаков на бины и WoE значения в них</a></li>
+
+                </ul>
+
+            </li>
+            <li>
+                <a href="#section3">3. Валидационные тесты</a>
+                <ul style="list-style-type:circle;">
+                    <li><a href="#section3_1">3.1. Отличия в числе пропусков между обучающей и тестовой выборкой</a>
+                    </li>
+                    <li><a href="#section3_2">3.2. Качество классификации по каждому из признаков финальной модели</a>
+                    </li>
+                    <li><a href="#section3_3">3.3. Доверительный интервал для индекса Джини</a></li>
+                    <li><a href="#section3_4">3.4. P-value на коэффициенты модели</a></li>
+                    <li><a href="#section3_5">3.5. Одномерный анализ</a></li>
+                    <li><a href="#section3_6">3.6. Проверка на монотонность</a></li>
+                    <li><a href="#section3_7">3.7. Проверка на люфт</a></li>
+                    <li><a href="#section3_8">3.8. Проверка на VIF</a></li>
+                    <li><a href="#section3_9">3.9. PSI</a></li>
+
+                </ul>
+            </li>
+            <li>
+                <a href="#section4">4. Дополнительные отчеты</a>
+                <ul style="list-style-type:circle;">
+                    <li><a href="#section4_1">4.1. Статистики по бинам предсказания</a></li>
+                    <li><a href="#section4_2">4.2. Корреляции по факторам, вошедшим в модель</a></li>
+                    <li><a href="#section4_3">4.3. Скоринговая карта</a></li>
+                    <li><a href="#section4_4">4.4. История отбора признаков</a></li>
+                    <li><a href="#section4_5">4.5. Вклад каждой переменной в модель</a></li>
+
+                </ul>
+            </li>
+        </ul>
+    </div>
+    -->
+    <ul id="myUL">
+        <li>
+            <h2 class="caret caret-down" id="section1">1. Общие положения</h2>
+            <ul class="nested active">
+                <li>
+                    <h3 class="caret" id="section1_1">1.1. Цель документа</h3>
+                    <ul class="nested">
+                        <p>Данный отчет создан с целью обеспечения непрерывности бизнес-процессов, сохранения и
+                            распространения внутренних
+                            экспертных знаний внутри Группы, а также для подтверждения обоснованности и корректности
+                            разработанной
+                            модели.</p>
+                        <p>Для достижения этих целей Отчёт подробно описывает основные методологические подходы к
+                            моделированию</p>
+                    </ul>
+                </li>
+                <li>
+                    <h3 class="caret" id="section1_2">1.2. Цели и задачи, для которых требуется построение модели</h3>
+                    <ul class="nested">
+                        <li>
+                            <p>{{ model_aim }}</p>
+                        </li>
+                    </ul>
+                </li>
+                <li>
+                    <h3 class="caret" id="section1_3">1.3. Структура документа</h3>
+                    <ul class="nested">
+                        <p>Данный отчет имеет следующую структуру:</p>
+                        <ul style="list-style-type:disc;">
+                            <li>Раздел <a href="#section2">«Параметры модели»</a> содержит описание полученной модели:
+                                признаки,
+                                коэффицинты регрессионной модели, разбиение признаков на бины
+                            </li>
+                            <li>Раздел <a href="#section3">«Валидационные тесты»</a> содержит информацию о валидационных
+                                тестах
+                            </li>
+
+                        </ul>
+                    </ul>
+                </li>
+                <li>
+                    <h3 class="caret" id="section1_4">1.4. Сводная информация по модели</h3>
+                    <ul class="nested">
+                        <p>Основные идентификационные данные модели собраны в Таблице 1.</p>
+                        <h4>Таблица 1. Идентификаторы модели</h4>
+                        <table style="width:100%">
+                            <tr>
+                                <th width="30%">Параметр</th>
+                                <th width="70%">Значение</th>
+                            </tr>
+                            <tr>
+                                <td><b>Название модели / ID</b></td>
+                                <td>{{ model_name }}</td>
+                            </tr>
+                            <tr>
+                                <td><b>Версия отчёта</b></td>
+                                <td>{{ report_version }}</td>
+                            </tr>
+                            <tr>
+                                <td><b>Заказчик модели</b></td>
+                                <td>{{ zakazchik }}</td>
+                            </tr>
+                            <tr>
+                                <td><b>Название участника Группы и структурного подразделения верхнего уровня</b></td>
+                                <td>{{ high_level_department }}</td>
+                            </tr>
+                            <tr>
+                                <td><b>Разработчик модели (в случае привлечения внешнего разработчика, необходимо
+                                        указать название
+                                        компании)</b></td>
+                                <td>{{ ds_name }}</td>
+                            </tr>
+                        </table>
+
+                        <p>Описание и характеристики выборок, использованных при разработке и тестировании модели
+                            представлены в Таблице
+                            2.</p>
+                        <h4>Таблица 2. Сводное описание выборок для модели</h4>
+                        <table style="width:100%">
+                            <tr>
+                                <td width="20%"><strong>Характеристика</strong></td>
+                                <td width="16%"><strong>Обучающая выборка</strong></td>
+                                <td width="16%"><strong>Тестовая выборка</strong></td>
+                            </tr>
+                            <tr>
+                                <td><b>Определение целевого события</b></td>
+                                <td colspan="5">{{ target_descr }}</td>
+                            </tr>
+                            <tr>
+                                <td><b>Определение нецелевого события</b></td>
+                                <td colspan="5">{{ non_target_descr }}</td>
+                            </tr>
+                            <tr>
+                                <td><b>Количество наблюдений в выборке</b></td>
+                                <td>{{ count_train }}</td>
+                                <td>{{ count_test }}</td>
+                            </tr>
+                            <tr>
+                                <td><b>Количество целевых событий</b></td>
+                                <td>{{ train_target_cnt }}</td>
+                                <td>{{ test_target_cnt }}</td>
+                            </tr>
+                            <tr>
+                                <td><b>Количество нецелевых событий</b></td>
+                                <td>{{ train_nontarget_cnt }}</td>
+                                <td>{{ test_nontarget_cnt }}</td>
+                            </tr>
+                            <tr>
+                                <td><b>Среднее целевой переменной в выборке</b></td>
+                                <td>{{ train_target_perc }}%</td>
+                                <td>{{ test_target_perc }}%</td>
+                            </tr>
+                        </table>
+
+                        <p>Результаты работы модели, обученной на обучающей выборки, приведены в Таблице 3.</p>
+                        <h4>Таблица 3. Результаты работы модели, обученной на обучающей выборки</h4>
+                        <table style="width:100%">
+                            <tr>
+                                <td width="20%"><strong>Характеристика</strong></td>
+                                <td width="40%"><strong>Обучающая выборка</strong></td>
+                                <td width="40%"><strong>Тестовая выборка</strong></td>
+                            </tr>
+                            <tr>
+                                <td><b>AUC</b></td>
+                                <td>{{ train_auc_full }}%</td>
+                                <td>{{ test_auc_full }}%</td>
+                            </tr>
+                            <tr>
+                                <td><b>Gini</b></td>
+                                <td>{{ train_gini_full }}%</td>
+                                <td>{{ test_gini_full }}%</td>
+                            </tr>
+                        </table>
+                        <p><img src="AUC_test_plot_full.png" alt="AUC test plot full"></p>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li>
+            <h2 class="caret caret-down" id="section2">2. Структура модели</h2>
+            <ul class="nested active">
+                <li>
+                    <h3 class="caret" id="section2_1">2.1. Коэффициенты регрессионной модели</h3>
+                    <ul class="nested">
+                        <p>Коэффициенты регрессионной модели, приведены в Таблице 4.</p>
+                        <h4>Таблица 4. Коэффициенты регрессионной модели</h4>
+                        <table style="width:100%">
+                            <tr>
+                                <td width="40%"><strong>Наименование признака</strong></td>
+                                <td width="40%"><strong>Регрессионный коэффициент</strong></td>
+                            </tr>
+                            {% for pair in model_coef %}
+                            <tr>
+                                <td>{{ pair[0] }}</td>
+                                <td>{{ pair[1] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <p><img src="Model_weights.png" alt="Model weights"></p>
+                    </ul>
+                </li>
+                <li>
+                    <h3 class="caret" id="section2_2">2.2. Разбиение признаков на бины и WoE значения в них</h3>
+                    <ul class="nested">
+                        <p></p>
+                        {% for img in features_woe %}
+                        <p><img src={{img}} alt="{{img}}}" /></p>
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li>
+            <h2 class="caret caret-down" id="section3">3. Валидационные тесты</h2>
+            <ul class="nested active">
+                <li>
+                    <h3 class="caret" id="section3_1">3.1. Отличия в числе пропусков между обучающей и тестовой выборкой
+                    </h3>
+                    <ul class="nested">
+                        <p>Статистка по пропущенным значениям в обучающей и тестовой выборке приведена в Таблице 5.</p>
+                        <h4>Таблица 5. Пропуски в данных</h4>
+                        <table style="width:100%">
+                            <tr>
+                                <td width="40%"><strong>Наименование признака</strong></td>
+
+                                <td width="40%"><strong>Число валидных значений в обучающей выборке</strong></td>
+                                <td width="40%"><strong>Число валидных значений в тестовой выборке</strong></td>
+
+                                <td width="40%"><strong>Число пропущенных значений в обучающей выборке</strong></td>
+                                <td width="40%"><strong>Число пропущенных значений в тестовой выборке</strong></td>
+
+                                <td width="40%"><strong>Процент валидных значений в обучающей выборке</strong></td>
+                                <td width="40%"><strong>Процент валидных значений в тестовой выборке</strong></td>
+
+                                <td width="40%"><strong>Разница процентов валидных значений в выборках </strong></td>
+                            </tr>
+                            {% for val in final_nan_stat %}
+                            <tr>
+                                <td>{{ val[0] }}</td>
+                                <td>{{ val[1] }}</td>
+                                <td>{{ val[2] }}</td>
+                                <td>{{ val[3] }}</td>
+
+                                <td>{{ val[4] }}</td>
+                                <td>{{ val[5] }}</td>
+                                <td>{{ val[6] }}</td>
+                                <td>{{ val[7] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section3_2">3.2. Качество классификации по каждому из признаков финальной
+                        модели</h3>
+                    <ul class="nested">
+                        <p></p>
+                        {% for img in features_roc_auc %}
+                        <p><img src={{img}} alt="{{img}}}" /></p>
+                        {% endfor %}
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section3_3">3.3. Доверительный интервал для индекса Джини</h3>
+                    <ul class="nested">
+                        <span>95%-ый доверительный интервал для индекса Джини:</span>
+                        <ul>
+                            <li>- на <strong>обучающей</strong> выборке: <strong>({{ train_gini_confint[0] }}, {{ train_gini_confint[1] }})</strong></li>
+                            <li>- на <strong>тестовой</strong> выборке: <strong>({{ test_gini_confint[0] }}, {{ test_gini_confint[1] }})</strong></li>
+                        </ul>
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section3_4">3.4. P-value на коэффициенты модели</h3>
+                    <ul class="nested">
+                        {% if p_vals is not none %}
+                        <h4>Для признаков на обучающей выборке:</h4>
+                        <table>
+                            <tr>
+                                <td><strong>Наименование признака</strong></td>
+                                <td><strong>Значение P-value</strong></td>
+                            </tr>
+                            {% for val in p_vals %}
+                            <tr>
+                                <td>{{ val[0] }}</td>
+                                <td>{{ val[1] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <h4>Для признаков на тестовой выборке:</h4>
+                        <table>
+                            <tr>
+                                <td><strong>Наименование признака</strong></td>
+                                <td><strong>Значение P-value</strong></td>
+                            </tr>
+                            {% for val in p_vals_test %}
+                            <tr>
+                                <td>{{ val[0] }}</td>
+                                <td>{{ val[1] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        {% else %}
+                        <p>Требуется обучить модель с параметром <strong>regularized_refit=False</strong></p>
+                        {% endif %}
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section3_5">3.5. Одномерный анализ</h3>
+                    <ul class="nested">
+                        <p>Gini для обучающей выборки</p>
+                        <p><img src="train_enc_ginis.png" alt="Train_enc ginis"></p>
+                        <p>Gini для тестовой выборки</p>
+                        <p><img src="test_enc_ginis.png" alt="Test_enc ginis"></p>
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section3_6">3.6. Проверка на монотонность</h3>
+                    <ul class="nested">
+                        <p></p>
+                        {% for img in woe_bars %}
+                        <p><img src={{img}} alt="{{img}}}" /></p>
+                        {% endfor %}
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section3_7">3.7. Проверка на люфт</h3>
+                    <ul class="nested">
+                        <p></p>
+                        {% for img in backlash_plots %}
+                        <p><img src={{img}} alt="{{img}}}" /></p>
+                        {% endfor %}
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section3_8">3.8. Проверка на VIF</h3>
+                    <ul class="nested">
+                        {% if train_vif|length > 0 %}
+                        <table>
+                            <tr>
+                                <td><strong>Наименование признака</strong></td>
+                                <td><strong>Значение VIF</strong></td>
+                            </tr>
+                            {% for val in train_vif %}
+                            <tr>
+                                <td>{{ val[0] }}</td>
+                                <td>{{ val[1] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        {% else %}
+                        <p>Для подсчета VIF необходимо несколько признаков</p>
+                        {% endif %}
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section3_9">3.9. PSI</h3>
+                    <ul class="nested">
+                        {% if psi_total is not none %}
+                        <p>Совокупный PSI</p>
+                        <table>
+                            <tr>
+                                <td><strong>Наименование признака</strong></td>
+                                <td><strong>Значение PSI</strong></td>
+                            </tr>
+                            {% for val in psi_total %}
+                            <tr>
+                                <td>{{ val[0] }}</td>
+                                <td>{{ val[1] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <p>PSI по нецелевым событиям</p>
+                        <table>
+                            <tr>
+                                <td><strong>Наименование признака</strong></td>
+                                <td><strong>Значение PSI</strong></td>
+                            </tr>
+                            {% for val in psi_zeros %}
+                            <tr>
+                                <td>{{ val[0] }}</td>
+                                <td>{{ val[1] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <p>PSI по целевым событиям</p>
+                        <table>
+                            <tr>
+                                <td><strong>Наименование признака</strong></td>
+                                <td><strong>Значение PSI</strong></td>
+                            </tr>
+                            {% for val in psi_ones %}
+                            <tr>
+                                <td>{{ val[0] }}</td>
+                                <td>{{ val[1] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <p>Группировка по предсказаниям на обучающей выборке (совокупная)</p>
+                        <p><img src="binned_train_total.png" alt="binned_train_total"></p>
+                        <p>Группировка по предсказаниям целевого и нецелевого событий на обучающей выборке</p>
+                        <p><img src="binned_train_posneg.png" alt="binned_train_posneg"></p>
+                        <p>Группировка по предсказаниям на тестовой выборке (совокупная)</p>
+                        <p><img src="binned_test_total.png" alt="binned_test_total"></p>
+                        <p>Группировка по предсказаниям целевого и нецелевого событий на тестовой выборке</p>
+                        <p><img src="binned_test_posneg.png" alt="binned_test_posneg"></p>
+                        <p>PSI по сгруппированным предсказаниям модели</p>
+                        <table>
+                            <tr>
+                                <td><strong>Совокупный PSI</strong></td>
+                                <td>{{ psi_binned_total }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>PSI по нецелевым событиям</strong></td>
+                                <td>{{ psi_binned_zeros }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>PSI по целевым событиям</strong></td>
+                                <td>{{ psi_binned_ones }}</td>
+                            </tr>
+                        </table>
+                        {% else %}
+                        <p>Для подсчета PSI требуется предварительно вызвать fit() и predict_proba()</p>
+                        {% endif %}
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li>
+            <h2 class="caret caret-down" id="section4">4. Дополнительные отчеты</h2>
+            <ul class="nested active">
+
+                <li>
+                    <h3 class="caret" id="section4_1">4.1. Статистики по бинам предсказания</h3>
+                    <ul class="nested">
+                        <h4>Среднее значение целевой переменной на обучающей и тестовой выборке</h4>
+                        <p><img src="binned_stats_target.png" alt="binned_stats_target"></p>
+                        <h4>Статистика предсказания по обучающей выборке</h4>
+                        <p><img src="binned_stats_train.png" alt="binned_stats_train"></p>
+                        {% if binned_p_stats_train is not none %}
+                        <table>
+                            <tr>
+                                <td><strong>ScoreBin</strong></td>
+                                <td><strong>count</strong></td>
+                                <td><strong>mean</strong></td>
+                                <td><strong>std</strong></td>
+                                <td><strong>min</strong></td>
+                                <td><strong>25%</strong></td>
+                                <td><strong>50%</strong></td>
+                                <td><strong>75%</strong></td>
+                                <td><strong>max</strong></td>
+                            </tr>
+                            {% for val in binned_p_stats_train %}
+                            <tr>
+                                <td><strong>{{ val[0] }}</strong></td>
+                                <td>{{ val[1] }}</td>
+                                <td>{{ val[2] }}</td>
+                                <td>{{ val[3] }}</td>
+                                <td>{{ val[4] }}</td>
+                                <td>{{ val[5] }}</td>
+                                <td>{{ val[6] }}</td>
+                                <td>{{ val[7] }}</td>
+                                <td>{{ val[8] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        {% endif %}
+                        <h4>Статистика предсказания по тестовой выборке</h4>
+                        <p><img src="binned_stats_test.png" alt="binned_stats_test"></p>
+                        {% if binned_p_stats_test is not none %}
+                        <table>
+                            <tr>
+                                <td><strong>ScoreBin</strong></td>
+                                <td><strong>count</strong></td>
+                                <td><strong>mean</strong></td>
+                                <td><strong>std</strong></td>
+                                <td><strong>min</strong></td>
+                                <td><strong>25%</strong></td>
+                                <td><strong>50%</strong></td>
+                                <td><strong>75%</strong></td>
+                                <td><strong>max</strong></td>
+                            </tr>
+                            {% for val in binned_p_stats_test %}
+                            <tr>
+                                <td><strong>{{ val[0] }}</strong></td>
+                                <td>{{ val[1] }}</td>
+                                <td>{{ val[2] }}</td>
+                                <td>{{ val[3] }}</td>
+                                <td>{{ val[4] }}</td>
+                                <td>{{ val[5] }}</td>
+                                <td>{{ val[6] }}</td>
+                                <td>{{ val[7] }}</td>
+                                <td>{{ val[8] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        {% endif %}
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section4_2">4.2. Корреляции по факторам, вошедшим в модель</h3>
+                    <ul class="nested">
+                        <p><img src="corr_heatmap.png" alt="corr_heatmap"></p>
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section4_3">4.3. Скоринговая карта</h3>
+                    <ul class="nested">
+                        <table>
+                            <tr>
+                                <td><strong>Variable</strong></td>
+                                <td><strong>Value</strong></td>
+                                <td><strong>WOE</strong></td>
+                                <td><strong>COEF</strong></td>
+                                <td><strong>POINTS</strong></td>
+                            </tr>
+                            {% for val in scorecard %}
+                            <tr>
+                                <td>{{ val[0] }}</td>
+                                <td>{{ val[1] }}</td>
+                                <td>{{ val[2] }}</td>
+                                <td>{{ val[3] }}</td>
+                                <td>{{ val[4] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <br/>
+                        <span>Расшифровка обработки пропусков:</span>
+                        <ul>
+                            <li><strong>__NaN__</strong> - отдельная группа с оценкой WoE</li>
+                            <li><strong>__NaN_0__</strong> - отдельная группа с WoE = 0</li>
+                            <li><strong>__NaN_maxfreq__</strong> - добавленная в самую частую группу без оценки WoE</li>
+                            <li><strong>__NaN_maxp__</strong> - добавленная в группу с максимальной вероятностью без оценки WoE</li>
+                            <li><strong>__NaN_minp__</strong> - добавленная в группу с минимальной вероятностью без оценки WoE</li>
+                        </ul>
+                        <br/>
+                        <span>Расшифровка обработки редких/неизвестных категорий:</span>
+                        <ul>
+                            <li><strong>__Small__</strong> - отдельная группа с оценкой WoE</li>
+                            <li><strong>__Small_nan__</strong> - в группу NaN</li>
+                            <li><strong>__Small_0__</strong> - отдельная группа с WoE = 0</li>
+                            <li><strong>__Small_maxfreq__</strong> - добавленная в самую частую группу без оценки WoE</li>
+                            <li><strong>__Small_maxp__</strong> - добавленная в группу с максимальной вероятностью без оценки WoE</li>
+                            <li><strong>__Small_minp__</strong> - добавленная в группу с минимальной вероятностью без оценки WoE</li>
+                        </ul>
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section4_4">4.4. История отбора признаков</h3>
+                    <ul class="nested">
+                        <table>
+                            <tr>
+                                <td><strong>Признак</strong></td>
+                                <td><strong></strong></td>
+                            </tr>
+                            {% for val in feature_history %}
+                            <tr>
+                                <td>{{ val[0] }}</td>
+                                <td>{{ val[1] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </ul>
+                </li>
+
+                <li>
+                    <h3 class="caret" id="section4_5">4.5. Вклад каждой переменной в модель</h3>
+                    <ul class="nested">
+                        {% if feature_contribution is not none %}
+
+                        {% if feature_contribution|length > 0 %}
+                        <table>
+                            <tr>
+                                <td><strong>Признак</strong></td>
+                                <td><strong>Вклад в ROC AUC</strong></td>
+                            </tr>
+                            {% for val in feature_contribution %}
+                            <tr>
+                                <td>{{ val[0] }}</td>
+                                <td>{{ val[1] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        {% else %}
+                        <p>Для подсчета требуются как минимум 2 признака в финальной модели</p>
+                        {% endif %}
+
+                        {% else %}
+                        <p>Требуется обучить модель с параметром <strong>regularized_refit=False</strong></p>
+                        {% endif %}
+                    </ul>
+                </li>
+            </ul>
+        </li>
+    </ul>
+    <script type="text/javascript">
+        var toggler = document.getElementsByClassName("caret");
+        var i;
+
+        for (i = 0; i < toggler.length; i++) {
+            toggler[i].addEventListener("click", function () {
+                this.parentElement.querySelector(".nested").classList.toggle("active");
+                this.classList.toggle("caret-down");
+            });
+        }
+    </script>
+</body>
+
+</html>

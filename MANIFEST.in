@@ -1,0 +1,4 @@
+include autowoe/lib/report/shaptxt
+include autowoe/lib/report/autowoe_report_template.html
+include README.md
+
