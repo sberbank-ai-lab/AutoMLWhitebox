@@ -686,6 +686,41 @@
                 </li>
             </ul>
         </li>
+        <li>
+            <h2 class="caret caret-down" id="section5">5. Сгруппированные отчеты</h2>
+            <ul class="nested active">
+                <li>
+                    <h3 class="caret" id="section5_1">5.1. Средняя прогнозная вероятность</h3>
+                    <ul class="nested">
+                        {% if dategrouped_value is not none %}
+                        {% for val in dategrouped_value %}
+                        <p><img src="{{val}}"></p>
+                        {% endfor %}
+                        {% endif %}
+                    </ul>
+                </li>
+                <li>
+                    <h3 class="caret" id="section5_2">5.2. Индекс Джини</h3>
+                    <ul class="nested">
+                        {% if dategrouped_gini is not none %}
+                        {% for val in dategrouped_gini %}
+                        <p><img src="{{val}}"></p>
+                        {% endfor %}
+                        {% endif %}
+                    </ul>
+                </li>
+                <li>
+                    <h3 class="caret" id="section5_3">5.3. Доля значений NaN</h3>
+                    <ul class="nested">
+                        {% if dategrouped_nan is not none %}
+                        {% for val in dategrouped_nan %}
+                        <p><img src="{{val}}"></p>
+                        {% endfor %}
+                        {% endif %}
+                    </ul>
+                </li>
+            </ul>
+        </li>
     </ul>
     <script type="text/javascript">
         var toggler = document.getElementsByClassName("caret");

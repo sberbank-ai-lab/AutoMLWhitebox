@@ -18,7 +18,8 @@ from ..utilities.refit import calc_p_val_on_valid
 from .report_generator import ReportGenerator
 from .utilities_images.utilities_images import plot_roc_curve_image, plot_model_weights,\
     plot_roc_curve_feature_image, plot_feature_split, plot_ginis, plot_woe_bars, plot_double_roc_curve,\
-        plot_backlash_check, plot_binned, plot_binned_stats, plot_corr_heatmap, plot_mean_target
+    plot_backlash_check, plot_binned, plot_binned_stats, plot_corr_heatmap, plot_mean_target,\
+    plot_grouped, plot_bars
 
 
 class ReportDeco:
@@ -26,7 +27,7 @@ class ReportDeco:
     Класс-декоратор для генерации отчета
     """
 
-    def __init__(self, auto_woe: AutoWoE):
+    def __init__(self, auto_woe: AutoWoE, group_columns: list = None):
         """
         Parameters
         ----------
@@ -43,6 +44,9 @@ class ReportDeco:
         self.__train_enc = None
         self.__test_enc = None
         self.__predict_proba_train = None
+        self.__group_columns = group_columns or []
+        self.__train = None
+        self.__test = None
 
     @property
     @wraps(AutoWoE.p_vals)
@@ -82,6 +86,7 @@ class ReportDeco:
         ###################################################################
         ###################################################################
         train = kwargs["train"] if "train" in kwargs else args[0]
+        self.__train = train
         self.__target_name = kwargs["target_name"] if "target_name" in kwargs else args[4]
         self.__train_enc = self.__auto_woe.test_encoding(train)
         self.__train_target = train[self.__target_name]
@@ -147,6 +152,7 @@ class ReportDeco:
         ###################################################################
         ###################################################################
         test = kwargs["test"] if "test" in kwargs else args[0]
+        self.__test = test
         self.__test_enc = self.__auto_woe.test_encoding(test)
 
         self.__stat["count_test"] = int(test.shape[0])
@@ -357,6 +363,82 @@ class ReportDeco:
             plot_binned_stats(test_binned, os.path.join(report_params['output_path'], 'binned_stats_test.png'))
             self.__stat["binned_p_stats_train"] = ReportDeco.get_binned_p_stats(train_binned)
             self.__stat["binned_p_stats_test"] = ReportDeco.get_binned_p_stats(test_binned)
+
+        # Stats grouped by date
+        self.__stat["dategrouped_value"] = []
+        self.__stat["dategrouped_gini"] = []
+        self.__stat["dategrouped_nan"] = []
+        for columns in self.__group_columns:
+
+            df_train = pd.concat([
+                pd.DataFrame({
+                    'proba': self.__predict_proba_train,
+                    'target': self.__train_target.values,
+                }, index=self.__train.index),
+                pd.Series('train', index=self.__train.index, name='dataset')
+                if columns == 'dataset' else self.__train[columns] if columns in self.__train else None
+            ], axis=1)
+            df_test = pd.concat([
+                pd.DataFrame({
+                    'proba': self.__predict_proba,
+                    'target': self.__test_target.values,
+                }, index=self.__test.index),
+                pd.Series('test', index=self.__test.index, name='dataset')
+                if columns == 'dataset' else self.__test[columns] if columns in self.__test else None
+            ], axis=1)
+
+            df_to_group = list(filter(lambda x: columns in x[1], [('train', df_train), ('test', df_test)]))
+
+            if df_to_group:
+                plot_name_value = f'grouped_{columns if isinstance(columns, str) else "_".join(columns)}_value.png'
+                self.__stat["dategrouped_value"].append(plot_name_value)
+                plot_grouped(
+                    list(map(lambda x: x[1], df_to_group)),
+                    columns,
+                    path=os.path.join(
+                        report_params['output_path'],
+                        plot_name_value
+                    ),
+                    plot_kind='line'
+                )
+
+                def gini(target, score):
+                    try:
+                        # Some bins may not have enough values (ex. only 0s or only 1s) - so exception is possible
+                        return 100 * (2 * roc_auc_score(target, score) - 1)
+                    except:
+                        return None
+                
+                gini_grouped = map(lambda x: (x[0], x[1].groupby(columns).apply(lambda x: gini(x['target'], x['proba']))), df_to_group)
+                gini_df = pd.DataFrame(dict(gini_grouped))
+                plot_name_gini = f'grouped_{columns if isinstance(columns, str) else "_".join(columns)}_gini.png'
+                self.__stat["dategrouped_gini"].append(plot_name_gini)
+                plot_bars(
+                    gini_df,
+                    path=os.path.join(
+                        report_params['output_path'],
+                        plot_name_gini
+                    )
+                )
+
+                train_nan = self.__train.groupby(columns).agg(lambda x: x.isna().mean() * 100) if columns in self.__train else None
+                test_nan = self.__test.groupby(columns).agg(lambda x: x.isna().mean() * 100) if columns in self.__test else None
+
+                for feature in self.__auto_woe.features_fit.index:
+                    nan_df = pd.DataFrame({
+                        'train': train_nan[feature] if train_nan is not None else None,
+                        'test': test_nan[feature] if test_nan is not None else None,
+                    })
+                    plot_name_nan = f'grouped_{columns if isinstance(columns, str) else "_".join(columns)}_nan_{feature}.png'
+                    self.__stat["dategrouped_nan"].append(plot_name_nan)
+                    plot_bars(
+                        nan_df,
+                        os.path.join(
+                            report_params['output_path'],
+                            plot_name_nan
+                        ),
+                        f'Процент NaN в признаке {feature}'
+                    )
 
         # Correlation heatmap
         if self.__train_enc is not None:

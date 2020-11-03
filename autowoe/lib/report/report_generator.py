@@ -79,6 +79,9 @@ class ReportGenerator:
                 corr_map_table=report_params["corr_map_table"],
                 binned_p_stats_train=report_params["binned_p_stats_train"],
                 binned_p_stats_test=report_params["binned_p_stats_test"],
+                dategrouped_value=report_params["dategrouped_value"],
+                dategrouped_gini=report_params["dategrouped_gini"],
+                dategrouped_nan=report_params["dategrouped_nan"],
             ))
 
     def generate_report(self, report_params):
