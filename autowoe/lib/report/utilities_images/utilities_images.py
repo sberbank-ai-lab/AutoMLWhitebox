@@ -2,9 +2,17 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
+from typing import Union, List
 
 from sklearn.metrics import roc_auc_score, roc_curve
 
+def plot_bars(df, path, title=None):
+    sns.set(style="whitegrid", font_scale=1.5)
+    pl = df.plot(figsize=(10,10), kind='bar', cmap='Accent', width=1)
+    if title:
+        pl.title.set_text(title)
+    pl.get_figure().savefig(path, bbox_inches='tight')
+    plt.close()
 
 def plot_roc_curve_image(y_true, y_pred, path):
     sns.set(style="whitegrid", font_scale=1.5)
@@ -201,3 +209,79 @@ def plot_mean_target(train_binned, test_binned, path):
     pl = df.plot(figsize=(10,10), kind='bar', cmap='Accent', width=1)
     pl.get_figure().savefig(path, bbox_inches='tight')
     plt.close()
+
+
+def plot_grouped(
+        df: List[pd.DataFrame],
+        group_columns: Union[str, List[str]],
+        group_name: str = None,
+        plot_kind: str = 'point',
+        path: str = None,
+):
+    """
+    Построить график аггрегированных значений для тренировочных и валидационных данных.
+
+    Данные датафреймов аггрегируются либо по столбцу group_column,
+    который должен быть в каждом датафрейме, либо по последовательностям
+    group_data_train и group_data_test для тренировочного и валидационного датафрейма соответственно.
+
+    Parameters
+    ----------
+    df : List[pandas.DataFrame]
+        Данные (список датафремов) для построения графиков 
+    group_columns : str or list
+        Имя столбца или нескольких столбцов, по которым будет производиться аггрегация.
+    group_name : str
+        Название оси Х на графике, вдоль которой будет производиться группировка значений.
+        Если не задано, будут использованы названия столбцов group_columns.
+    plot_kind : str
+        Тип графика. Возможны значения "point", "bar" и "line".
+    path : str, optional
+        Путь к файлу, в который будет сохранено изображение.
+        Если не задан, то изображение не сохраняется.
+
+    Returns
+    -------
+
+    """
+
+    if not df:
+        return
+    
+    if isinstance(group_columns, str):
+        group_columns = [group_columns]
+
+    group_name = group_name or (group_columns if isinstance(group_columns, str) else '_'.join(group_columns))
+
+    mdf = pd.concat(list(map(lambda x: pd.melt(x, id_vars=group_columns), df)))
+    mdf = mdf.sort_values(by=group_columns)
+    mdf[group_name] = mdf[group_columns].astype(str).agg('/'.join, axis=1)
+    mdf = mdf[['variable', 'value', group_name]]
+
+    # bins = max(df_train[group_columns].nunique(dropna=False), df_test[group_columns].nunique(dropna=False))
+    # if bins > max_bins:
+
+    sns.set(style="whitegrid", font_scale=1.5)
+    if plot_kind == 'point':
+        plot = sns.catplot(x=group_name, y='value', hue='variable', kind='point', data=mdf, height=10)
+        plot.set_xticklabels(rotation=30)
+    elif plot_kind == 'line':
+        sns.set(rc={'figure.figsize': (10, 10)})
+        plot = sns.lineplot(x=group_name, y='value', hue='variable', data=mdf, sort=False)
+        plt.xticks(rotation=30)
+    elif plot_kind == 'box':
+        plot = sns.boxplot(x=group_name, y="value", hue="variable", data=mdf, showfliers=False)
+        plot.set_xticklabels(rotation=30)
+    # elif plot_kind == 'bar':
+    #     mdf = mdf.groupby(by=group_name).agg('mean')
+    #     plot = mdf.plot(figsize=(10, 10), kind='bar', cmap='Accent', width=0.8)
+    #     plt.xticks(rotation=30)
+    else:
+        raise ValueError(f'Invalid plot kind: {plot_kind}')
+
+    if path:
+        plot.get_figure().savefig(path, bbox_inches='tight')
+
+    plt.close()
+
+    return
