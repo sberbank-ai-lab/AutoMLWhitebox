@@ -5,7 +5,7 @@ from .lib.report.report import ReportDeco
 
 __all__ = ["AutoWoE", "ReportDeco"]
 
-__version__ = '1.1.1'
+__version__ = '1.2'
 
 np.random.seed(42)
 

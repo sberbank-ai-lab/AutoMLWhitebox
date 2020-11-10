@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="autowoe",
-    version="1.1.1",
+    version="1.2",
     author="Anton Vakhrushev, Grigorii Penkin, Alexey Burlakov, Igor Myagkov",
     author_email='AGVakhrushev@sberbank.ru',
     license='MIT',
