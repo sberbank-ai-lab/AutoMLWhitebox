@@ -6,13 +6,15 @@ from typing import Union, List
 
 from sklearn.metrics import roc_auc_score, roc_curve
 
+
 def plot_bars(df, path, title=None):
     sns.set(style="whitegrid", font_scale=1.5)
-    pl = df.plot(figsize=(10,10), kind='bar', cmap='Accent', width=1)
+    pl = df.plot(figsize=(10, 10), kind='bar', cmap='Accent', width=1)
     if title:
         pl.title.set_text(title)
     pl.get_figure().savefig(path, bbox_inches='tight')
     plt.close()
+
 
 def plot_roc_curve_image(y_true, y_pred, path):
     sns.set(style="whitegrid", font_scale=1.5)
@@ -36,6 +38,7 @@ def plot_roc_curve_image(y_true, y_pred, path):
     plt.title('ROC кривая (GINI = {:.3f})'.format(2 * auc_score_reg - 1))
     plt.savefig(path, bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.close()
+
 
 def plot_double_roc_curve(train_y_true, train_y_pred, test_y_true, test_y_pred, path):
     sns.set(style="whitegrid", font_scale=1.5)
@@ -73,6 +76,7 @@ def plot_double_roc_curve(train_y_true, train_y_pred, test_y_true, test_y_pred, 
     plt.title('ROC кривая')
     plt.savefig(path, bbox_inches='tight')
     plt.close()
+
 
 def plot_roc_curve_feature_image(feature_name, y_true, y_pred, path):
     sns.set(style="whitegrid", font_scale=1.5)
@@ -127,6 +131,7 @@ def plot_feature_split(feature_name, features, path):
     plt.savefig(path, bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.close()
 
+
 def plot_ginis(data_enc, target, path):
     sns.set(style="whitegrid", font_scale=1.5)
     feats = list(data_enc.columns)
@@ -137,6 +142,7 @@ def plot_ginis(data_enc, target, path):
     pl.get_figure().savefig(path, bbox_inches='tight')
     plt.close()
 
+
 def plot_woe_bars(train_enc, train_target, test_enc, test_target, target_name, column, path):
     sns.set(style="whitegrid", font_scale=1.5)
     names = ['train', 'test']
@@ -145,25 +151,34 @@ def plot_woe_bars(train_enc, train_target, test_enc, test_target, target_name, c
         df_copy = df.copy().round(3)
         df_copy[target_name] = target
         samples.append(df_copy)
-    
+
     samples = [x[[target_name, column]].groupby(column)[target_name].agg(['mean', 'count']).reset_index()
                for x in samples]
-    
+
     for df in samples:
         df['count'] /= df['count'].sum()
-        
+
         df.rename({'count': 'Freq', 'mean': 'DefaultRate',
-                               column: 'WOE: ' + column}, inplace=True, axis=1)
-        
+                   column: 'WOE: ' + column}, inplace=True, axis=1)
+
     total = pd.concat(samples, axis=0, ignore_index=True)
+    order = total['WOE: ' + column].drop_duplicates().sort_values().values
+    order = pd.Series(np.arange(order.shape[0]), index=order)
+
     total['_sample_'] = np.concatenate([[n] * x.shape[0] for (n, x) in zip(names, samples)])
-    
+
     plt.figure(figsize=(10, 10))
-    ax = sns.barplot(x='WOE: '+column, hue="_sample_", y="Freq", data=total, palette=sns.color_palette("Accent", 7))
+    ax = sns.barplot(x='WOE: ' + column, hue="_sample_", y="Freq", data=total,
+                     palette=sns.color_palette("Accent", 7))
     ax2 = ax.twinx()
-    pl = sns.pointplot(x='WOE: '+column, y="DefaultRate", hue="_sample_", kind="point", data=total, ax=ax2)
-    pl.get_figure().savefig(path, bbox_inches='tight')
+
+    for df, name in zip(samples, names):
+        df.set_index(df['WOE: ' + column].map(order).values)['DefaultRate'].plot(ax=ax2, label=name, marker='x')
+    ax2.legend(title='_sample_')
+
+    plt.savefig(path, bbox_inches='tight')
     plt.close()
+
 
 def plot_backlash_check(predict_proba, data_enc, target, col, path):
     sns.set(style="whitegrid", font_scale=1.5)
@@ -172,21 +187,23 @@ def plot_backlash_check(predict_proba, data_enc, target, col, path):
     grp.plot(figsize=(10, 10)).get_figure().savefig(path, bbox_inches='tight')
     plt.close()
 
+
 def plot_binned(data_binned, path1, path2):
     sns.set(style="whitegrid", font_scale=1.5)
-    pl = (data_binned.groupby('ScoreBin').size().sort_index() / data_binned.shape[0]).plot(figsize=(10,10), kind='bar')
+    pl = (data_binned.groupby('ScoreBin').size().sort_index() / data_binned.shape[0]).plot(figsize=(10, 10), kind='bar')
     pl.get_figure().savefig(path1, bbox_inches='tight')
     plt.close()
 
-    neg = (data_binned[data_binned['Target']==0].groupby('ScoreBin').size().sort_index() / 
-     (data_binned.shape[0] - data_binned['Target'].sum()))# .plot(kind='bar', cmap='Accent')
+    neg = (data_binned[data_binned['Target'] == 0].groupby('ScoreBin').size().sort_index() /
+           (data_binned.shape[0] - data_binned['Target'].sum()))  # .plot(kind='bar', cmap='Accent')
 
-    pos = (data_binned[data_binned['Target']==1].groupby('ScoreBin').size().sort_index() / 
-     (data_binned['Target'].sum()))# .plot(kind='bar', cmap='Accent', color='blue')
+    pos = (data_binned[data_binned['Target'] == 1].groupby('ScoreBin').size().sort_index() /
+           (data_binned['Target'].sum()))  # .plot(kind='bar', cmap='Accent', color='blue')
 
-    pl = pd.DataFrame({'positive': pos, 'negative': neg}).plot(figsize=(10,10), kind='bar', cmap='Accent', width=1)
+    pl = pd.DataFrame({'positive': pos, 'negative': neg}).plot(figsize=(10, 10), kind='bar', cmap='Accent', width=1)
     pl.get_figure().savefig(path2, bbox_inches='tight')
     plt.close()
+
 
 def plot_binned_stats(data_binned, path):
     sns.set(style="whitegrid", font_scale=1.5)
@@ -194,19 +211,21 @@ def plot_binned_stats(data_binned, path):
     pl.get_figure().savefig(path, bbox_inches='tight')
     plt.close()
 
+
 def plot_corr_heatmap(corr_map, path):
     sns.set(style="whitegrid", font_scale=1.5)
     plt.figure(figsize=(20, 10))
-    pl = sns.heatmap(corr_map, annot = True, annot_kws={"size": 8}, fmt='.1g')
+    pl = sns.heatmap(corr_map, annot=True, annot_kws={"size": 8}, fmt='.1g')
     pl.get_figure().savefig(path, bbox_inches='tight')
     plt.close()
+
 
 def plot_mean_target(train_binned, test_binned, path):
     sns.set(style="whitegrid", font_scale=1.5)
     train_stat = train_binned.groupby('ScoreBin').agg(mean_target=('Target', 'mean'))
     test_stat = test_binned.groupby('ScoreBin').agg(mean_target=('Target', 'mean'))
     df = pd.DataFrame({'train_mean_target': train_stat['mean_target'], 'test_mean_target': test_stat['mean_target']})
-    pl = df.plot(figsize=(10,10), kind='bar', cmap='Accent', width=1)
+    pl = df.plot(figsize=(10, 10), kind='bar', cmap='Accent', width=1)
     pl.get_figure().savefig(path, bbox_inches='tight')
     plt.close()
 
@@ -228,7 +247,7 @@ def plot_grouped(
     Parameters
     ----------
     df : List[pandas.DataFrame]
-        Данные (список датафремов) для построения графиков 
+        Данные (список датафремов) для построения графиков
     group_columns : str or list
         Имя столбца или нескольких столбцов, по которым будет производиться аггрегация.
     group_name : str
@@ -247,7 +266,7 @@ def plot_grouped(
 
     if not df:
         return
-    
+
     if isinstance(group_columns, str):
         group_columns = [group_columns]
 

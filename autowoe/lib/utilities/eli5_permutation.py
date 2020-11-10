@@ -1,3 +1,5 @@
+# module was taken from eli5 lib as is
+# this was made to simplify dependencies
 """
 A module for computing feature importances by measuring how score decreases
 when a feature is not available. It contains basic building blocks;
@@ -56,7 +58,7 @@ def get_score_importances(
         n_iter=5,  # type: int
         columns_to_shuffle=None,
         random_state=None
-    ):
+):
     # type: (...) -> Tuple[float, List[np.ndarray]]
     """
     Return ``(base_score, score_decreases)`` tuple with the base score and

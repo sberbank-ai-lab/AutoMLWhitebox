@@ -1,7 +1,6 @@
 from copy import deepcopy
 from typing import Dict, Union, List, Tuple, Hashable
 
-import numpy as np
 import pandas as pd
 
 feature = Union[str, int, float]
@@ -25,7 +24,8 @@ nan_merge_cases = {
     'to_maxp': '__NaN_maxp__',
 
 }
-        
+
+
 class SmallNans:
     """
     Классс для обработки nan (вещественные признаки)
@@ -41,53 +41,52 @@ class SmallNans:
 
     def __init__(self, th_nan: Union[int, float] = 32, th_cat: Union[int, float] = 32,
                  cat_merge_to: str = 'to_woe_0', nan_merge_to: str = 'to_woe_0'
-                ):
+                 ):
         """
-        Parameters
-        ----------
-        th_nan
-        th_cat
+
+        Args:
+            th_nan:
+            th_cat:
+            cat_merge_to:
+            nan_merge_to:
         """
         self._th_nan = th_nan
         self._th_cat = th_cat
-        self.__cat_merge_to = cat_merge_to
-        self.__nan_merge_to = nan_merge_to
-        
+        self._cat_merge_to = cat_merge_to
+        self._nan_merge_to = nan_merge_to
 
-        self.__features_type = None
-        self.__cat_encoding = None  # Словарь с кодированием по группам категориальных признаков
-        self.__all_encoding = None
-        self.__spec_values = None
+        self._features_type = None
+        self.cat_encoding = None  # Словарь с кодированием по группам категориальных признаков
+        self.all_encoding = None
+        self._spec_values = None
 
     def fit_transform(self, train: pd.DataFrame, features_type: Dict[Hashable, str]
-                     ) -> Tuple[pd.DataFrame, Dict[Hashable, Dict[str, float]]]:
+                      ) -> Tuple[pd.DataFrame, Dict[Hashable, Dict[str, float]]]:
         """
 
-        Parameters
-        ----------
-        train
-        features_type: Dict[Hashable, str]
-           Типы признаков "cat" - категориальный, "real" - вещественный
+        Args:
+            train:
+            features_type: Dict[Hashable, str]
+                Типы признаков "cat" - категориальный, "real" - вещественный
 
-        Returns
-        -------
+        Returns:
 
-        """        
+        """
         train_ = deepcopy(train)
         all_encoding = dict()
         cat_encoding = dict()
         spec_values = dict()
-        self.__features_type = features_type
-        for col in self.__features_type:
+        self._features_type = features_type
+        for col in self._features_type:
             d = dict()
-            if self.__features_type[col] == "cat":
+            if self._features_type[col] == "cat":
                 vc = train_[col].value_counts()
                 big_cat = set(vc.index)
                 vc = vc.loc[vc < self._th_cat]
                 vc_sum, small_cat = vc.sum(), set(vc.index)
                 if vc_sum < self._th_nan:
                     # Случай когда суммарно всех небольших категорий все равно мало
-                    enc_type = cat_merge_cases[self.__cat_merge_to]
+                    enc_type = cat_merge_cases[self._cat_merge_to]
                     fill_val = 0 if enc_type == "__Small_0__" else None
                     d[enc_type] = fill_val
                 else:
@@ -97,54 +96,48 @@ class SmallNans:
                 train_.loc[train_[col].isin(small_cat), col] = enc_type
                 cat_encoding[col] = big_cat.difference(small_cat), small_cat, enc_type
                 #  Небольшие категории, которые будем кодировать отдельно
-                                
+
             nan_count = train_[col].isna().sum()
             if nan_count < self._th_nan:
-                
-                enc_type = nan_merge_cases[self.__nan_merge_to]
+
+                enc_type = nan_merge_cases[self._nan_merge_to]
                 fill_val = 0 if enc_type == "__NaN_0__" else None
                 d[enc_type] = fill_val
-                
+
             else:
                 enc_type = "__NaN__"  # Большое число пропусков. Кодируем как обычную категорию
                 # исключаем NaN из специальных значений для категорий
-                if self.__features_type[col] != "cat":
+                if self._features_type[col] != "cat":
                     d[enc_type] = None
-                    
+
             spec_values[col] = d
 
             train_[col] = train_[col].fillna(enc_type)
             all_encoding[col] = enc_type
 
-        self.__cat_encoding = cat_encoding
-        self.__all_encoding = all_encoding
-        self.__spec_values = spec_values
+        self.cat_encoding = cat_encoding
+        self.all_encoding = all_encoding
+        self._spec_values = spec_values
 
         return train_, spec_values
 
     def transform(self, test: pd.DataFrame, features: f_list_type):
         """
 
-        Parameters
-        ----------
-        test:
-            Тестовая выборка
+        Args:
+            test: Тестовая выборка
+            features: Список признаков для теста
 
-        features:
-            Список признаков для теста
-
-        Returns
-        -------
+        Returns:
 
         """
-        test_ = test[features].copy() 
+        test_ = test[features].copy()
 
-        for col in features:            
-            # и здесь фикс от Антона
-            if self.__features_type[col] == "cat":
-                big_cat, _, small_pad = self.__cat_encoding[col]
+        for col in features:
+            if self._features_type[col] == "cat":
+                big_cat, _, small_pad = self.cat_encoding[col]
                 test_.loc[~(test_[col].isin(big_cat) | test_[col].isnull()), col] = small_pad
-                
-            test_[col] = test_[col].fillna(self.__all_encoding[col])
 
-        return test_, deepcopy(self.__spec_values)
+            test_[col] = test_[col].fillna(self.all_encoding[col])
+
+        return test_, deepcopy(self._spec_values)

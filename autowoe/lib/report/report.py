@@ -1,12 +1,13 @@
 import os
 import itertools
+import warnings
 
 import numpy as np
 import scipy as sp
 import pandas as pd
 
 from functools import wraps
-from typing import Dict
+from typing import Dict, Any, Optional, Hashable, Union, List
 from collections import defaultdict
 from copy import deepcopy
 
@@ -16,9 +17,9 @@ from sklearn.linear_model import LogisticRegression
 from ..autowoe import AutoWoE
 from ..utilities.refit import calc_p_val_on_valid
 from .report_generator import ReportGenerator
-from .utilities_images.utilities_images import plot_roc_curve_image, plot_model_weights,\
-    plot_roc_curve_feature_image, plot_feature_split, plot_ginis, plot_woe_bars, plot_double_roc_curve,\
-    plot_backlash_check, plot_binned, plot_binned_stats, plot_corr_heatmap, plot_mean_target,\
+from .utilities_images.utilities_images import plot_model_weights, \
+    plot_roc_curve_feature_image, plot_feature_split, plot_ginis, plot_woe_bars, plot_double_roc_curve, \
+    plot_backlash_check, plot_binned, plot_binned_stats, plot_corr_heatmap, plot_mean_target, \
     plot_grouped, plot_bars
 
 
@@ -27,13 +28,13 @@ class ReportDeco:
     Класс-декоратор для генерации отчета
     """
 
-    def __init__(self, auto_woe: AutoWoE, group_columns: list = None):
+    def __init__(self, auto_woe: AutoWoE):
         """
-        Parameters
-        ----------
-        auto_woe
+
+        Args:
+            auto_woe:
         """
-        self.__auto_woe = auto_woe
+        self._auto_woe = auto_woe
         self.__stat = dict()
 
         self.__target_name = None
@@ -44,51 +45,92 @@ class ReportDeco:
         self.__train_enc = None
         self.__test_enc = None
         self.__predict_proba_train = None
-        self.__group_columns = group_columns or []
+
         self.__train = None
         self.__test = None
 
     @property
+    def __auto_woe(self) -> AutoWoE:
+        warnings.warn("""Attribute autowoe should not be explisitly called anymore. 
+        Access to autowoe attributes is now avaliable via ReportDeco __getattr__ method""", DeprecationWarning, stacklevel=2)
+
+        return self._auto_woe
+
+    @property
+    def model(self) -> AutoWoE:
+        return self._auto_woe
+
+    def __getattr__(self, item) -> Any:
+        return getattr(self._auto_woe, item)
+
+    @property
     @wraps(AutoWoE.p_vals)
     def p_vals(self):
-        return self.__auto_woe.p_vals
+        return self._auto_woe.p_vals
 
     @property
     @wraps(AutoWoE.features_type)
     def features_type(self):
-        return self.__auto_woe.features_type
+        return self._auto_woe.features_type
 
     @property
     @wraps(AutoWoE.private_features_type)
     def private_features_type(self):
-        return self.__auto_woe.private_features_type
+        return self._auto_woe.private_features_type
 
     @property
     def features_fit(self):
-        return self.__auto_woe.features_fit
+        return self._auto_woe.features_fit
 
     @wraps(AutoWoE.get_split)
     def get_split(self, *args, **kwargs):
-        return self.__auto_woe.get_split(*args, **kwargs)
+        return self._auto_woe.get_split(*args, **kwargs)
 
     @wraps(AutoWoE.get_woe)
     def get_woe(self, *args, **kwargs):
-        return self.__auto_woe.get_woe(*args, **kwargs)
+        return self._auto_woe.get_woe(*args, **kwargs)
 
     @wraps(AutoWoE.get_sql_inference_query)
     def get_sql_inference_query(self, *args, **kwargs):
-        return self.__auto_woe.get_sql_inference_query(*args, **kwargs)
+        return self._auto_woe.get_sql_inference_query(*args, **kwargs)
+
+    @wraps(AutoWoE.test_encoding)
+    def test_encoding(self, *args, **kwargs):
+        return self._auto_woe.test_encoding(*args, **kwargs)
 
     @wraps(AutoWoE.fit)
-    def fit(self, *args, **kwargs):
-        # parse stat
-        self.__auto_woe.fit(*args, **kwargs)
-        ###################################################################
-        ###################################################################
-        train = kwargs["train"] if "train" in kwargs else args[0]
+    def fit(self, train: pd.DataFrame,
+            target_name: str,
+            features_type: Optional[Dict[str, str]] = None,
+            group_kf: Hashable = None,
+            max_bin_count: Optional[Dict[str, int]] = None,
+            features_monotone_constraints: Optional[Dict[str, str]] = None,
+            validation: Optional[pd.DataFrame] = None,
+            report_cols: Optional[List[str]] = None):
+        """
+
+        Args:
+            train:
+            target_name:
+            features_type:
+            group_kf:
+            max_bin_count:
+            features_monotone_constraints:
+            validation:
+            report_cols:
+
+        Returns:
+
+        """
+        if report_cols is None:
+            report_cols = []
+
+        self._auto_woe.fit(train.drop(report_cols, axis=1), target_name, features_type, group_kf, max_bin_count,
+                           features_monotone_constraints, validation)
+
         self.__train = train
-        self.__target_name = kwargs["target_name"] if "target_name" in kwargs else args[4]
-        self.__train_enc = self.__auto_woe.test_encoding(train)
+        self.__target_name = target_name
+        self.__train_enc = self._auto_woe.test_encoding(train)
         self.__train_target = train[self.__target_name]
 
         self.__stat["count_train"] = int(train.shape[0])
@@ -112,14 +154,15 @@ class ReportDeco:
             y_true=train[self.__target_name].values,
             y_score=self.__predict_proba_train
         )
-        
+
         features_fit = self.features_fit.sort_values()
         self.__stat["model_coef"] = list(zip(features_fit.index, features_fit))
-        self.__stat["model_coef"] = [(str(pair[0]), 0+round(pair[1], 6)) for pair in self.__stat["model_coef"]]
-        
+        self.__stat["model_coef"] = [(str(pair[0]), 0 + round(pair[1], 6)) for pair in self.__stat["model_coef"]]
+
         # P-values are present only if regularized_refit == False
         if self.p_vals is not None:
-            self.__stat["p_vals"] = [(k, 0+round(v, 6)) for k, v in sorted(zip(self.p_vals.index, self.p_vals), key=lambda item: item[1], reverse=True)]
+            self.__stat["p_vals"] = [(k, 0 + round(v, 6)) for k, v in
+                                     sorted(zip(self.p_vals.index, self.p_vals), key=lambda item: item[1], reverse=True)]
         else:
             self.__stat["p_vals"] = None
 
@@ -129,12 +172,12 @@ class ReportDeco:
         self.__stat["scorecard"] = self.__get_scorecard()
 
         # Copying feature history from the model and enriching it with Gini and IV
-        feature_history = deepcopy(self.__auto_woe.feature_history)
+        feature_history = deepcopy(self._auto_woe.feature_history)
         for feature in self.__train_enc.columns:
             feature_gini = round((roc_auc_score(self.__train_target, -self.__train_enc[feature].values) - 0.5) * 2, 2)
-            feature_iv = round(self.__auto_woe.woe_dict[feature].iv, 2)
+            feature_iv = round(self._auto_woe.woe_dict[feature].iv, 2)
             feature_history[feature] = f'Selected; Gini = {feature_gini}, IV = {feature_iv}'
-        
+
         self.__stat["feature_history"] = sorted(feature_history.items())
         ###################################################################
         self.__nan_stat = [[], []]
@@ -142,18 +185,26 @@ class ReportDeco:
             feature_ = feature.split("__F__")[0]
             not_nan_count = train[feature_].count()
             nan_count = train.shape[0] - not_nan_count
-            not_nan_count_per = 100*(nan_count / train.shape[0])
+            not_nan_count_per = 100 * (nan_count / train.shape[0])
             self.__nan_stat[0].append((feature_, not_nan_count, nan_count, not_nan_count_per))
 
     @wraps(AutoWoE.predict_proba)
-    def predict_proba(self, *args, **kwargs):
+    def predict_proba(self, test: pd.DataFrame, report: bool = True):
+        """
+
+        Args:
+            test:
+            report:
+
+        Returns:
+
+        """
         # parse stat
-        predict_proba = self.__auto_woe.predict_proba(*args, **kwargs)
-        ###################################################################
-        ###################################################################
-        test = kwargs["test"] if "test" in kwargs else args[0]
+        predict_proba = self._auto_woe.predict_proba(test)
+        if not report:
+            return predict_proba
         self.__test = test
-        self.__test_enc = self.__auto_woe.test_encoding(test)
+        self.__test_enc = self._auto_woe.test_encoding(test)
 
         self.__stat["count_test"] = int(test.shape[0])
         self.__stat["test_target_cnt"] = int(test[self.__target_name].sum())
@@ -182,12 +233,14 @@ class ReportDeco:
         # Calculate p-values on test only if regularized_refit == False
         if self.p_vals is not None:
             p_vals_test, _ = calc_p_val_on_valid(self.__test_enc, self.__test_target)
-            self.__stat["p_vals_test"] = [(k, 0+round(v, 6)) for k, v in sorted(zip(list(self.__test_enc.columns) + ['Intercept_'], p_vals_test), key=lambda item: item[1], reverse=True)]
+            self.__stat["p_vals_test"] = [(k, 0 + round(v, 6)) for k, v in
+                                          sorted(zip(list(self.__test_enc.columns) + ['Intercept_'], p_vals_test),
+                                                 key=lambda item: item[1], reverse=True)]
         else:
             self.__stat["p_vals_test"] = None
-        
+
         # Don't calculate feature contribution if regularized_refit=True
-        if self.__auto_woe._AutoWoE__regularized_refit:
+        if self._auto_woe.params['regularized_refit']:
             self.__stat["feature_contribution"] = None
         else:
             self.__stat["feature_contribution"] = self.__refit_leave_one_out()
@@ -198,28 +251,33 @@ class ReportDeco:
             feature_ = feature.split("__F__")[0]
             not_nan_count = test[feature_].count()
             nan_count = test.shape[0] - not_nan_count
-            not_nan_count_per = 100*(nan_count / test.shape[0])
+            not_nan_count_per = 100 * (nan_count / test.shape[0])
             self.__nan_stat[1].append((feature_, not_nan_count, nan_count, not_nan_count_per))
 
         return predict_proba
 
-    def generate_report(self, report_params: Dict):
+    def generate_report(self, report_params: Dict, groupby: Optional[Union[str, List[str]]] = None):
         """
         Метод для генерации отчета
         Для корректного отображения необходимо последоватьельно запустить метод fit и predict_proba
-        Parameters
-        ----------
-        report_params
 
-        Returns
-        -------
+        Args:
+            report_params:
+            groupby:
+
+        Returns:
 
         """
+        if groupby is None:
+            groupby = []
+        elif type(groupby) is str:
+            groupby = [groupby]
+
         if not os.path.exists(report_params['output_path']):
             os.mkdir(report_params['output_path'])
-        
+
         rg = ReportGenerator()
-        
+
         plot_double_roc_curve(
             self.__train_target,
             self.__predict_proba_train,
@@ -244,7 +302,7 @@ class ReportDeco:
         self.__stat["final_nan_stat"] = final_nan_stat
 
         self.__stat["features_roc_auc"] = []
-        for feature in self.__auto_woe.features_fit.index:
+        for feature in self._auto_woe.features_fit.index:
             name = feature + '_roc_auc.png'
             self.__stat["features_roc_auc"].append(name)
 
@@ -253,7 +311,7 @@ class ReportDeco:
                                          os.path.join(report_params['output_path'], name))
 
         self.__stat["features_woe"] = []
-        for feature in self.__auto_woe.features_fit.index:
+        for feature in self._auto_woe.features_fit.index:
             name = feature + '_woe.png'
             self.__stat["features_woe"].append(name)
 
@@ -266,7 +324,7 @@ class ReportDeco:
                 self.__train_target,
                 os.path.join(report_params['output_path'], 'train_enc_ginis.png')
             )
-        
+
         # Gini indices on test dataset features
         if self.__test_target is not None:
             plot_ginis(
@@ -274,11 +332,11 @@ class ReportDeco:
                 self.__test_target,
                 os.path.join(report_params['output_path'], 'test_enc_ginis.png')
             )
-        
+
         # Monotonicity check
         self.__stat["woe_bars"] = []
         if self.__train_target is not None and self.__test_target is not None:
-            for feature in self.__auto_woe.features_fit.index:
+            for feature in self._auto_woe.features_fit.index:
                 name = feature + '_woe_bars.png'
                 self.__stat["woe_bars"].append(name)
                 plot_woe_bars(
@@ -294,7 +352,7 @@ class ReportDeco:
         # Backlash check using only train data
         self.__stat["backlash_plots"] = []
         if self.__train_target is not None:
-            for feature in self.__auto_woe.features_fit.index:
+            for feature in self._auto_woe.features_fit.index:
                 name = feature + '_backlash_plot.png'
                 self.__stat["backlash_plots"].append(name)
                 plot_backlash_check(
@@ -316,7 +374,7 @@ class ReportDeco:
                 self.__train_enc[self.__train_target == 1],
                 self.__test_enc[self.__test_target == 1]
             )
-            
+
             # Split score into 10 bins for train and test
             train_binned, test_binned = self.__get_binned_data(10)
             names = ['binned_train_total.png', 'binned_train_posneg.png']
@@ -331,7 +389,7 @@ class ReportDeco:
                 os.path.join(report_params['output_path'], names[0]),
                 os.path.join(report_params['output_path'], names[1])
             )
-            
+
             # Selecting [0][1] because there is only 1 feature in the output
             self.__stat["psi_binned_total"] = ReportDeco.calc_psi(
                 train_binned[['ScoreBin']],
@@ -368,7 +426,7 @@ class ReportDeco:
         self.__stat["dategrouped_value"] = []
         self.__stat["dategrouped_gini"] = []
         self.__stat["dategrouped_nan"] = []
-        for columns in self.__group_columns:
+        for columns in groupby:
 
             df_train = pd.concat([
                 pd.DataFrame({
@@ -408,8 +466,9 @@ class ReportDeco:
                         return 100 * (2 * roc_auc_score(target, score) - 1)
                     except:
                         return None
-                
-                gini_grouped = map(lambda x: (x[0], x[1].groupby(columns).apply(lambda x: gini(x['target'], x['proba']))), df_to_group)
+
+                gini_grouped = map(lambda x: (x[0], x[1].groupby(columns).apply(lambda x: gini(x['target'], x['proba']))),
+                                   df_to_group)
                 gini_df = pd.DataFrame(dict(gini_grouped))
                 plot_name_gini = f'grouped_{columns if isinstance(columns, str) else "_".join(columns)}_gini.png'
                 self.__stat["dategrouped_gini"].append(plot_name_gini)
@@ -421,7 +480,8 @@ class ReportDeco:
                     )
                 )
 
-                train_nan = self.__train.groupby(columns).agg(lambda x: x.isna().mean() * 100) if columns in self.__train else None
+                train_nan = self.__train.groupby(columns).agg(
+                    lambda x: x.isna().mean() * 100) if columns in self.__train else None
                 test_nan = self.__test.groupby(columns).agg(lambda x: x.isna().mean() * 100) if columns in self.__test else None
 
                 for feature in self.__auto_woe.features_fit.index:
@@ -445,8 +505,8 @@ class ReportDeco:
             corr_map = self.__train_enc.corr()
             plot_corr_heatmap(corr_map, os.path.join(report_params['output_path'], 'corr_heatmap.png'))
             self.__stat["corr_map_table"] = [
-                (x1, x2, 0+round(corr_map[x1][x2], 6))
-                for x1, x2 
+                (x1, x2, 0 + round(corr_map[x1][x2], 6))
+                for x1, x2
                 in itertools.combinations(self.__train_enc.columns, 2)
             ]
         else:
@@ -462,7 +522,7 @@ class ReportDeco:
         bins = None
 
         for df in [train_binned, test_binned]:
-            df['Score'] = np.log(df['P'] / (1-df['P']))
+            df['Score'] = np.log(df['P'] / (1 - df['P']))
             if bins is not None:
                 df['ScoreBin'] = pd.cut(df['Score'], bins, retbins=False)
             else:
@@ -473,17 +533,17 @@ class ReportDeco:
     def __get_scorecard(self):
         # Round value to 2 decimals and transform -0.0 into 0.0
         round_ext = lambda x: 0 + round(x, 2)
-        
+
         # Format of the result is "Variable - Value - WOE - COEF - POINTS"
         result = []
-        intercept = round_ext(self.__auto_woe.intercept)
+        intercept = round_ext(self._auto_woe.intercept)
         result.append(('Intercept', None, None, intercept, intercept))
         # Iterate over features that take part in the regression
-        for feature, coef in self.__auto_woe.features_fit.items():
-            woe = self.__auto_woe.woe_dict[feature]
+        for feature, coef in self._auto_woe.features_fit.items():
+            woe = self._auto_woe.woe_dict[feature]
             # "split" field for continuous and categorical
             # variables is different
-            if woe._f_type == 'cat':
+            if woe.f_type == 'cat':
                 cat_split = defaultdict(list)
                 special_values = {key for key in woe.cod_dict if type(key) is str}
                 for k, v in woe.split.items():
@@ -495,7 +555,7 @@ class ReportDeco:
                 if type(key) is str:
                     label = str(key)
                 # Cat values with the same WOE
-                elif woe._f_type == 'cat':
+                elif woe.f_type == 'cat':
                     label = ', '.join(str(x) for x in cat_split[key])
                 # Below are split cases only for continuous variables
                 elif key == 0:
@@ -509,16 +569,16 @@ class ReportDeco:
                     label = f'{feature} > {round_ext(woe.split[int(key - 1)])}'
                 else:
                     label = f'{round_ext(woe.split[int(key - 1)])} < {feature} <= {round_ext(woe.split[int(key)])}'
-                
+
                 row = (feature, label, round_ext(w), round_ext(coef), round_ext(w * coef))
                 result.append(row)
-            
+
         return result
 
     def __refit_leave_one_out(self):
         if len(self.features_fit) < 2:
             return []
-        
+
         result = dict()
         initial_score = roc_auc_score(y_true=self.__test_target.values, y_score=self.__predict_proba)
         for feature in self.features_fit.index:
@@ -549,13 +609,11 @@ class ReportDeco:
     def roc_auc_str(y_true, y_score):
         """
 
-        Parameters
-        ----------
-        y_true
-        y_score
+        Args:
+            y_true:
+            y_score:
 
-        Returns
-        -------
+        Returns:
 
         """
         auc = 100 * roc_auc_score(y_true=y_true, y_score=y_score)
@@ -564,14 +622,12 @@ class ReportDeco:
     @staticmethod
     def roc_gini_str(y_true, y_score):
         """
+        
+        Args:
+            y_true:
+            y_score:
 
-        Parameters
-        ----------
-        y_true
-        y_score
-
-        Returns
-        -------
+        Returns:
 
         """
         gini = 100 * (2 * roc_auc_score(y_true=y_true, y_score=y_score) - 1)
@@ -589,7 +645,7 @@ class ReportDeco:
         for _ in range(n):
             idx_ = np.random.choice(idx, size=idx.shape[0], replace=True)
             scores.append((roc_auc_score(y_true[idx_], y_score[idx_]) - .5) * 2)
-            
+
         return np.round(np.quantile(scores, bounds), 3)
 
     @staticmethod
@@ -603,23 +659,23 @@ class ReportDeco:
     @staticmethod
     def calc_psi(train_data, test_data):
         tr_len, val_len = train_data.shape[0], test_data.shape[0]
-        
+
         name = [0] * tr_len + [1] * val_len
         data = pd.concat([train_data, test_data], ignore_index=True)
         data['_sample_'] = name
-        
+
         PSIs = {}
-        
+
         for woe in data.columns.drop('_sample_'):
-            agg = data.groupby(woe)['_sample_'].agg(['sum', 'count']) # + .5
+            agg = data.groupby(woe)['_sample_'].agg(['sum', 'count'])  # + .5
             # % from val
-            prc_val = (agg['sum'] / val_len) 
+            prc_val = (agg['sum'] / val_len)
             # % from train
-            prc_tr = ((agg['count'] - agg['sum']) / tr_len) 
+            prc_tr = ((agg['count'] - agg['sum']) / tr_len)
             # psi
             # global psi
             psi = (prc_tr - prc_val) * np.log((prc_tr + 1e-3) / (prc_val + 1e-3))
-            
+
             PSIs[woe] = np.round(psi.sum(), 6)
-            
+
         return sorted(PSIs.items(), key=lambda item: item[1], reverse=True)

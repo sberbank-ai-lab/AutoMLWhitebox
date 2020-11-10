@@ -2,7 +2,8 @@ import s3fs
 
 
 class S3Client(s3fs.S3FileSystem):
-    """Класс-обёртка для доступа к хранилищу S3.
+    """
+    Класс-обёртка для доступа к хранилищу S3.
        Используется для доступа к объектам хранилища с использованием интерфейса файловой системы.
 
     """
@@ -11,13 +12,14 @@ class S3Client(s3fs.S3FileSystem):
         """
         Конструктор объекта файловой системы на S3 SberCloud.
 
-        :param aws_access_key_id: Публичный ключ доступа к бакету S3
-        :param aws_secret_access_key: Приватный ключ доступа к бакету S3
-        :param namespace: Идентификатор пространства пользователя в хранилище SberCloud. Используется для формировании
+        Args:
+            aws_access_key_id: Публичный ключ доступа к бакету S3
+            aws_secret_access_key: Приватный ключ доступа к бакету S3
+            namespace: Идентификатор пространства пользователя в хранилище SberCloud. Используется для формировании
                URL web-сервиса S3 SberCloud. Если не задан, то необходимо задать URL в аргументе endpoint_url
-        :param endpoint_url: URL web-сервиса S3 SberCloud. Если не задан, то URL будет автоматически
+            endpoint_url: URL web-сервиса S3 SberCloud. Если не задан, то URL будет автоматически
                сконструирован на основании значения namespace.
-        :param kwargs: Дополнительные параметры, передаваемые конструктору s3fs.S3FileSystem
+            **kwargs: Дополнительные параметры, передаваемые конструктору s3fs.S3FileSystem
         """
         if not namespace and not endpoint_url:
             raise ValueError('Either namespace or endpoint_url is required')

@@ -9,10 +9,12 @@ class CatEncoding:
     """
     Class for categorical data converting/reconverting to float values
     """
+
     def __init__(self, data: pd.DataFrame):
         """
-        :param data: Данные для кодирования. I колонка - признак, II - таргет
-        :type data: pandas.DataFrame
+
+        Args:
+            data: Данные для кодирования. I колонка - признак, II - таргет
         """
         self.data = data
         self.col = data.columns
@@ -20,29 +22,30 @@ class CatEncoding:
         self.data_info = pd.DataFrame(index=data.index, columns=[self.col[0], "mean_enc"])
         self.data_info[self.col[0]] = self.data[self.col[0]].values
 
-    def __call__(self, cv_index_split: Dict[int, List[int]], nan_index: np.array, 
+    def __call__(self, cv_index_split: Dict[int, List[int]], nan_index: np.array,
                  cat_alpha: float = 1.) -> pd.DataFrame:
         """
         Mean_target encoding на кросс-валидации
-        :param cv_index_split:
-        :type cv_index_split: dict
 
-        :param nan_index:
-        :type nan_index: numpy.array
-        :return:
+        Args:
+            cv_index_split:
+            nan_index:
+            cat_alpha:
+
+        Returns:
+
         """
         cv_index_split_ = deepcopy(cv_index_split)
         feature, target = self.col
-        
+
         for key in cv_index_split_:
             train_index, test_index = cv_index_split_[key]
             train_index, test_index = np.setdiff1d(train_index, nan_index), np.setdiff1d(test_index, nan_index)
-            # d_agg = self.data.iloc[train_index, :].groupby(self.col[0]).mean()[self.col[1]]
-            
+
             data_sl = self.data.iloc[train_index]
             d_agg = data_sl.groupby(feature)[target].agg(['sum', 'count'])
             d_agg = (d_agg['sum'] + cat_alpha * data_sl[target].mean()) / (d_agg['count'] + cat_alpha)
-            
+
             d_agg = d_agg.to_dict()
             self.data_info.iloc[test_index, 1] = self.data_info.iloc[test_index, 0].map(d_agg)
 
@@ -54,9 +57,13 @@ class CatEncoding:
         """
         Обратная к операция к mean_target_encoding.
         По заданному split определяет категории.
-        :param split:
-        :return:
-        Должна быть запущена только после __call__ !!!
+        Должна быть запущена только после __call__
+
+        Args:
+            split:
+
+        Returns:
+
         """
         df = self.data_info.copy()
         df["split_cat"] = np.searchsorted(split, df.mean_enc.values)
@@ -67,4 +74,3 @@ class CatEncoding:
 
         # словарь соответствий: имя категории -> номер бина
         return dict(zip(crosstab.index, max_cat))
-

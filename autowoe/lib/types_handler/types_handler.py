@@ -27,37 +27,33 @@ class TypesHandler:
                  train: pd.DataFrame,
                  public_features_type: Dict[Hashable, Any],
                  max_bin_count: Dict[Hashable, Optional[int]] = None,
-                 features_monotone_constraints: Dict[Hashable, str] = None):
+                 features_monotone_constraints: Optional[dict] = None):
         """
 
-        Parameters
-        ----------
-        max_bin_count
-        public_features_type
-        features_monotone_constraints
-        train
+        Args:
+            train:
+            public_features_type:
+            max_bin_count:
+            features_monotone_constraints:
         """
         self.__train = deepcopy(train)
         self.__public_features_type = deepcopy(public_features_type)
         self.__private_features_type = dict()
 
-        if max_bin_count:
-            self.__max_bin_count = collections.defaultdict(lambda: None, max_bin_count)
-        else:
-            self.__max_bin_count = collections.defaultdict(lambda: None)
+        if max_bin_count is None:
+            max_bin_count = {}
+        self.__max_bin_count = collections.defaultdict(lambda: None, max_bin_count)
 
-        if features_monotone_constraints:
-            self.__features_monotone_constraints = collections.defaultdict(lambda: "0", features_monotone_constraints)
-        else:
-            self.__features_monotone_constraints = collections.defaultdict(lambda: None)
+        if features_monotone_constraints is None:
+            features_monotone_constraints = {}
+        self.__features_monotone_constraints = collections.defaultdict(lambda: "0", features_monotone_constraints)
 
     @property
     def train(self):
         """
         Read only
 
-        Returns
-        -------
+        Return:
 
         """
         return self.__train
@@ -67,8 +63,7 @@ class TypesHandler:
         """
         Read only
 
-        Returns
-        -------
+        Return:
 
         """
         return self.__public_features_type
@@ -78,8 +73,7 @@ class TypesHandler:
         """
         Read only
 
-        Returns
-        -------
+        Returns:
 
         """
         return self.__private_features_type
@@ -88,8 +82,7 @@ class TypesHandler:
     def max_bin_count(self):
         """
 
-        Returns
-        -------
+        Returns:
 
         """
         return self.__max_bin_count
@@ -97,8 +90,8 @@ class TypesHandler:
     @property
     def features_monotone_constraints(self):
         """
-        Returns
-        -------
+
+        Returns:
 
         """
         return self.__features_monotone_constraints
@@ -106,12 +99,10 @@ class TypesHandler:
     def __feature_handler(self, feature_name):
         """
 
-        Parameters
-        ----------
-        feature_name
+        Args:
+            feature_name:
 
-        Returns
-        -------
+        Returns:
 
         """
         if dates_checker(self.__train[feature_name]):
@@ -141,9 +132,8 @@ class TypesHandler:
             "cat"
             "real"
             ("%Y%d%m", ("m", "d", "wd", "h", "min"))
-        Returns
-        -------
-        object
+
+        Returns:
 
         """
         for feature_name in self.public_features_type:

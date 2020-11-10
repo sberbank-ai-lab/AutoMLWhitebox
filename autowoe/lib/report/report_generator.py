@@ -1,8 +1,12 @@
 import os
-
-from jinja2 import FileSystemLoader, Environment
 from datetime import datetime
 from shutil import copyfile
+
+from jinja2 import FileSystemLoader, Environment
+
+from ..logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class ReportGenerator:
@@ -16,12 +20,11 @@ class ReportGenerator:
 
     def write_report_to_file(self, report_params):
         """
-        Parameters
-        ----------
-        report_params
 
-        Returns
-        -------
+        Args:
+            report_params:
+
+        Returns:
 
         """
         with open(os.path.join(report_params['output_path'], 'autowoe_report.html'), "w") as f:
@@ -79,6 +82,7 @@ class ReportGenerator:
                 corr_map_table=report_params["corr_map_table"],
                 binned_p_stats_train=report_params["binned_p_stats_train"],
                 binned_p_stats_test=report_params["binned_p_stats_test"],
+
                 dategrouped_value=report_params["dategrouped_value"],
                 dategrouped_gini=report_params["dategrouped_gini"],
                 dategrouped_nan=report_params["dategrouped_nan"],
@@ -86,12 +90,11 @@ class ReportGenerator:
 
     def generate_report(self, report_params):
         """
-        Parameters
-        ----------
-        report_params
 
-        Returns
-        -------
+        Args:
+            report_params:
+
+        Returns:
 
         """
         copyfile(os.path.join(os.path.dirname(__file__), 'shaptxt'),
@@ -99,4 +102,4 @@ class ReportGenerator:
 
         self.write_report_to_file(report_params)
 
-        print('Successfully wrote {}.'.format(os.path.join(report_params['output_path'], 'autowoe_report.html')))
+        logger.info('Successfully wrote {}.'.format(os.path.join(report_params['output_path'], 'autowoe_report.html')))

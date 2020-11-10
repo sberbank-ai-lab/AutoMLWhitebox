@@ -3,7 +3,7 @@ import pandas as pd
 import lightgbm as lgb
 
 from sklearn.model_selection import StratifiedKFold
-from autowoe.lib.utilities.utilities import flatten
+from autowoe.lib.utilities.utils import flatten
 
 
 class HTransform:
@@ -12,45 +12,35 @@ class HTransform:
 
     def __init__(self, x: pd.Series, y: pd.Series, cv_splits: int = 5):
         """
-        Parameters
-        ----------
-        x:
 
-        y:
-
-        cv_splits:
+        Args:
+            x:
+            y:
+            cv_splits:
         """
         self.x, self.y = x, y
-        self.cv = self.__get_cv(cv_splits)
+        self.cv = self._get_cv(cv_splits)
 
     @staticmethod
-    def __get_cv(cv_splits):
+    def _get_cv(cv_splits: int) -> StratifiedKFold:
         """
-        Parameters
-        ----------
-        cv_splits
 
-        Returns
-        -------
+        Args:
+            cv_splits:
+
+        Returns:
 
         """
         return StratifiedKFold(n_splits=cv_splits, random_state=323, shuffle=True)
 
-    def __call__(self, tree_params):
+    def __call__(self, tree_params: dict) -> np.ndarray:
         """
         Функция, возвращающая границы разбиения по переданной выборки и параметрам
 
-        Parameters
-        ----------
-        x: pd.Series
+        Args:
+            tree_params: dict or lightgbm tree params
 
-        y: pd.Series
-
-        tree_params:
-            hyperparameters of the DecisionTreeClassifier
-
-        Returns
-        -------
+        Returns:
 
         """
         default_tree_params = {
@@ -72,4 +62,4 @@ class HTransform:
         limits = list(limits)
         limits.sort()
 
-        return np.unique(limits)  # TODO: ?????
+        return np.unique(limits)

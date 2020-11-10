@@ -3,17 +3,16 @@ from sklearn.model_selection import StratifiedKFold, GroupKFold
 from typing import Iterable
 
 
-def cv_split_f(x, y, group_kf: Iterable = None, n_splits: int = 6):
+def cv_split_f(x, y, group_kf: Iterable = None, n_splits: int = 6) -> dict:
     """
-    Parameters
-    ----------
-    x
-    y
-    group_kf
-    n_splits
 
-    Returns
-    -------
+    Args:
+        x:
+        y:
+        group_kf:
+        n_splits:
+
+    Returns:
 
     """
     if group_kf is not None:
