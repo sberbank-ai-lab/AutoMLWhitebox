@@ -102,10 +102,6 @@ python setup.py install
     - n_folds
     - l1_grid_size
     - l1_exp_scale
-    
-    Do not touch:
-    - population_size
-    - feature_groups_count
 
 
 ### 6) Final model refit:
@@ -117,8 +113,8 @@ python setup.py install
     
     Optional:
     - interpreted_model
-    - l1_base_step (if regularized_refit)
-    - l1_exp_step (if regularized_refit)
+    - l1_grid_size (if regularized_refit)
+    - l1_exp_scale (if regularized_refit)
     
 ### 7) Report generation 
 
