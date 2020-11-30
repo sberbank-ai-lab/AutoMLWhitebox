@@ -1,0 +1,38 @@
+[tool.poetry]
+name = "AutoWoE"
+version = "1.2.0"
+description = "Библиотека автоматического построения интерпретируемых моделей"
+authors = ["Вахрушев Антон <AGVakhrushev@sberbank.ru>"]
+readme = "README.md"
+homepage = "https://github.com/sberbank-ai-lab/AutoMLWhitebox"
+repository = "https://github.com/sberbank-ai-lab/AutoMLWhitebox"
+classifiers = [
+    "Programming Language :: Python :: 3.7",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Natural Language :: Russian",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed"
+]
+
+[tool.poetry.dependencies]
+python = "^3.6.1"
+numpy = "*"
+scipy = "*"
+pandas = "*"
+scikit-learn = "*"
+lightgbm = "*"
+sphinx = "*"
+sphinx-rtd-theme = "*"
+joblib = "*"
+pytz = "*"
+pytest = "*"
+jinja2 = "*"
+matplotlib = "*"
+seaborn = "*"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
