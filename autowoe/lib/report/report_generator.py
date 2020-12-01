@@ -4,7 +4,7 @@ from shutil import copyfile
 
 from jinja2 import FileSystemLoader, Environment
 
-from ..logger import get_logger
+from ..logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -16,7 +16,7 @@ class ReportGenerator:
 
     def __init__(self):
         self.env = Environment(loader=FileSystemLoader(searchpath=os.path.dirname(__file__)))
-        self.base_template = self.env.get_template('autowoe_report_template.html')
+        self.base_template = self.env.get_template('report_en_v2.html')
 
     def write_report_to_file(self, report_params):
         """

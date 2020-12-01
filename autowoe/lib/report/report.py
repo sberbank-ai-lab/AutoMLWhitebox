@@ -1,26 +1,24 @@
-import os
 import itertools
+import os
 import warnings
-
-import numpy as np
-import scipy as sp
-import pandas as pd
-
-from functools import wraps
-from typing import Dict, Any, Optional, Hashable, Union, List
 from collections import defaultdict
 from copy import deepcopy
+from functools import wraps
+from typing import Dict, Any, Optional, Hashable, Union, List
 
-from sklearn.metrics import roc_auc_score
+import numpy as np
+import pandas as pd
+import scipy as sp
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score
 
-from ..autowoe import AutoWoE
-from ..utilities.refit import calc_p_val_on_valid
 from .report_generator import ReportGenerator
 from .utilities_images.utilities_images import plot_model_weights, \
     plot_roc_curve_feature_image, plot_feature_split, plot_ginis, plot_woe_bars, plot_double_roc_curve, \
     plot_backlash_check, plot_binned, plot_binned_stats, plot_corr_heatmap, plot_mean_target, \
     plot_grouped, plot_bars
+from ..autowoe import AutoWoE
+from ..utilities.refit import calc_p_val_on_valid
 
 
 class ReportDeco:
@@ -497,7 +495,7 @@ class ReportDeco:
                             report_params['output_path'],
                             plot_name_nan
                         ),
-                        f'Процент NaN в признаке {feature}'
+                        f'NaN rate of feature {feature}'
                     )
 
         # Correlation heatmap

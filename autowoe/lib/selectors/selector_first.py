@@ -9,7 +9,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 
 from autowoe.lib.utilities.eli5_permutation import get_score_importances
-from ..logger import get_logger
+from ..logging import get_logger
 from ..utilities.utils import drop_keys
 
 pd.options.mode.chained_assignment = None

@@ -6,7 +6,7 @@ import pandas as pd
 import scipy as sp
 from sklearn.metrics import roc_auc_score
 
-from ..logger import get_logger
+from ..logging import get_logger
 
 logger = get_logger(__name__)
 

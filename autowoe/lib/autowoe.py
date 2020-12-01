@@ -10,7 +10,7 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score
 
 from .cat_encoding.cat_encoding import CatEncoding
-from .logger import get_logger
+from .logging import get_logger, verbosity_to_loglevel
 from .optimizer.optimizer import TreeParamOptimizer
 from .pipelines.pipeline_homotopy import HTransform
 from .pipelines.pipeline_smallnans import SmallNans
@@ -88,89 +88,110 @@ class AutoWoE:
                  regularized_refit: bool = True,
                  p_val: float = 0.05,
                  debug: bool = False,
+                 verbose: int = 2,
                  **kwargs
                  ):
         """
-        Инициализация основных гиперпараметров алгоритма построения интерпретиремой модели
+        Initialization of the main hyperparameters related to the algorithm for interpretable model
 
         Args:
-        interpreted_model: bool
-            Флаг интерпретируемости модели
-        monotonic: bool
-            Глобальное условие на монотонность. Если True, то будут построены только монотонные биннинги
-            В метод .fit можно передать значения, изменяющие это условие отдельно для каждой фичи
-        max_bin_count: int
-            Глобальное ограничение на количество бинов. Может быть переписано для каждой фичи в .fit
-        select_type: None ot int
-            Тип первичного отбора признаков, если число, то
-            оставляем только столько признаков (самых лучших по feature_importance).
-            Если None оставлям те, у которых feature_importance больше 0.
-        pearson_th:  0 < pearson_th < 1
-            Трешхолд отбора признаков по корреляции. Будут отброшены все признаки,
-            у которых коэффициент корреляции больше по модулю pearson_th.
-        auc_th: .5 < auc_th < 1
-            Трешхолд отбора признаков по одномерному AUC. WOE c AUC < auc_th будут отброшены
-        vif_th: vif_th > 0
-            Трешхолд отбора признаков по VIF. Признаки с VIF > vif_th итеративно отбрасываются по одному
-            затем VIF пересчитывается, пока VIF всех не будет менее vif_th
-        imp_th: real >= 0
-            Трешхолд для отбора признаков по features importance
-        th_const:
-            Трешхолд в заключении о том, что признак константный.
-            Если число валидных значений больше трешхолда, то колонка не константная (int)
-            В случае указания float, число валидных значений будет определяться как размер_выборки * th_const
-        force_single_split: bool
-            В параметрах дерева можно задавать минимальное число наблюдений в листе. Таким образом,
-            для каких то фичей станет невозможно сделать разбиение на хотя бы 2 бина. Указав force_single_split=True можно
-            сдалть так, что для такой фичи создастся 1 сплит в случае если минимальный бин будет размером более чем th_const
-        th_nan: int >= 0
-            Трешхолд в заключении о том, что нужен подсчет WoE значений на None
-        th_cat: int >= 0
-            Трешхолд в заключении о том, какие категории считать маленькими
-        woe_diff_th: float = 0.01
-            Возмодность смеджить наны и редкие категории с каким-то бином,
-            если разница в вое менее woe_diff_th
-        min_bin_size: int > 1, 0 < float < 1
-            Минимальный размер бина при разбиении
-        min_bin_mults: list of floats > 1
-            Существует заданный минимальный размер бина.
-            Здесь можно указать лист, чтобы проверить - не работают ли лучше большие значения, пример [2, 4]
-        min_gains_to_split: list of floats >= 0
-            Значения min_gain_to_split которые будут перебраны для поиска лучшего сплита
-        auc_tol: 1e-5 <= auc_tol <=1e-2
-            Чувствительность к AUC. Считаем, что можем пожертвовать auc_tol качества от максимального,
-            чтобы сделать модель проще
-        cat_alpha: float > 0
-            Регуляризатор для кодирования категорий
-        cat_merge_to: str
-            Способ заполенния WoE значений на тестовой выборке для категорий, которых не было в обучающей выборке
-            Значения - 'to_nan', 'to_woe_0', 'to_maxfreq', 'to_maxp', 'to_minp'
-        nan_merge_to: str
-            Способ заполнения WoE значений на тестовой выборке для вещественных нанов, в случае, если они не попали
-            в свою группу Значения - 'to_woe_0', 'to_maxfreq', 'to_maxp', 'to_minp'
-        oof_woe: bool
-            Использовать oof кодирование для WOE, либо по классике
-        n_folds: int
-            Количество фолдов для отбора/кодирования итд ..
-        n_jobs: int > 0
-            Число используемых ядер
-        l1_grid_size: int > 0
-            Размер сетки в l1 регуляризации
-        l1_exp_scale: float > 1
-            Шкала сетки в l1 регуляризации
-        imp_type: str
-            Тип важности признаков. Доступны feature_imp и perm_imp.
-           По нему происходит сортировка признаков как на первой, так и на заключительной стадии отбора
-        regularized_refit: bool
-            Использовать регуляризацию в момент рефита модели. Иначе стат модель
-        p_val: 0 < p_val <= 1
-            В случае построения стат модели делать backward отбор до тех пор, пока все pvalues коэф модели
-            не будут меньше p_val
-        debug: bool
-            Дебаг режим
-            **kwargs:
+            interpreted_model: bool
+                Model interpretability flag.
+            monotonic: bool
+                Global condition for monotonic constraints. If "True", then only
+                monotonic binnings will be built. You can pass values to the .fit
+                method that change this condition separately for each feature.
+            max_bin_count: int
+                Global limit for the number of bins. Can be specified for every
+                feature in .fit
+            select_type: None or int
+                The type to specify the primary feature selection. If the type is an integer,
+                then we select the number of features indicated by this number (with the best feature_importance).
+                If the value is "None", we leave only features with feature_importance greater than 0.
+            pearson_th:  0 < pearson_th < 1
+                Threshold for feature selection by correlation. All features with
+                the absolute value of correlation coefficient greater then
+                pearson_th will be discarded.
+            auc_th: .5 < auc_th < 1
+                Threshold for feature selection by one-dimensional AUC. WoE with AUC < auc_th will
+                be discarded.
+            vif_th: vif_th > 0
+                Threshold for feature selection by VIF. Features with VIF > vif_th
+                are iteratively discarded one by one, then VIF is recalculated
+                until all VIFs are less than vif_th.
+            imp_th: real >= 0
+                Threshold for feature selection by feature importance
+            th_const:
+                Threshold, which determines that the feature is constant.
+                If the number of valid values is greater than the threshold, then
+                the column is not constant. For float, the number of
+                valid values will be calculated as the sample size * th_const
+            force_single_split: bool
+                In the tree parameters, you can set the minimum number of
+                observations in the leaf. Thus, for some features, splitting for 2 beans at least will be impossible. If you specify that
+                force_single_split = True, it means that 1 split will be created for the feature, if the minimum bin size is greater than th_const.
+            th_nan: int >= 0
+                Threshold, which determines that WoE values are calculated to NaN.
+            th_cat: int >= 0
+                Threshold, which determines which categories are small.
+            woe_diff_th: float = 0.01
+                The option to merge NaNs and rare categories with another bin,
+                if the difference in WoE is less than woe_diff_th
+            min_bin_size: int > 1, 0 < float < 1
+                Minimum bin size when splitting.
+            min_bin_mults: list of floats > 1
+                If minimum bin size is specified, you can specify a list to check
+                if large values work better, for example: [2, 4]
+            min_gains_to_split: list of floats >= 0
+                min_gain_to_split values that will be iterated to find the best split.
+            auc_tol: 1e-5 <= auc_tol <=1e-2
+                AUC tolerance. You can lower the auc_tol value from the maximum
+                to make the model simpler.
+            cat_alpha: float > 0
+                Regularizer for category encoding.
+            cat_merge_to: str
+                The way of WoE values filling in the test sample for categories
+                that are not in the training sample.
+                Values - 'to_nan', 'to_woe_0', 'to_maxfreq', 'to_maxp', 'to_minp'
+            nan_merge_to: str
+                The way of WoE values filling on the test sample for real NaNs,
+                if they are not included in their group.
+                Values - 'to_woe_0', 'to_maxfreq', 'to_maxp', 'to_minp'
+            oof_woe: bool
+                Use OOF or standard encoding for WOE.
+            n_folds: int
+                Number of folds for feature selection / encoding, etc.
+            n_jobs: int > 0
+                Number of CPU cores to run in parallel.
+            l1_base_step: real > 0
+                Grid size in l1 regularization
+            l1_exp_step: real > 1
+                Grid scale in l1 regularization
+            population_size: None, int > 0
+                Feature selection type in the selector. If the value is "None" then L1 boost is used.
+                If "int" is specified, then a standard step will be used for
+                the number of random subsamples indicated by this value.
+                Can be generalized to genetic algorithm.
+            feature_groups_count: int > 0
+                The number of groups in the genetic algorithm. Its effect is visible only when
+                population_size > 0
+            imp_type: str
+                Feature importances type. Feature_imp and perm_imp are available.
+                It is used to sort the features at the first and at the final
+                stage of feature selection.
+            regularized_refit: bool
+                Use regularization at the time of model refit. Otherwise, we have
+                a statistical model.
+            p_val: 0 < p_val <= 1
+                When training a statistical model, do backward selection
+                until all p-values of the model's coefficient are less than p_val
+            verbose: int >= 0
+                verbosity level
+            debug: bool
+                Debug mode
+                **kwargs:
         """
-
+        logger.setLevel(verbosity_to_loglevel(verbose))
         assert cat_merge_to in ['to_nan', 'to_woe_0', 'to_maxfreq', 'to_maxp', 'to_minp'], \
             "Value for cat_merge_to is invalid. Valid are 'to_nan', 'to_small', 'to_woe_0', 'to_maxfreq', 'to_maxp', 'to_minp'"
 
@@ -243,46 +264,16 @@ class AutoWoE:
 
     @property
     def features_type(self):
-        """
-        Геттер исходного набора признаков и их типов
-
-        Returns:
-
-        """
         return self._public_features_type
 
     @property
     def private_features_type(self):
-        """
-        Геттер внутренней типизации признаков
-
-        Returns:
-
-        """
         return self._private_features_type
 
     def get_split(self, feature: Hashable):
-        """
-        Геттер внутренностей разбиения на бины
-
-        Args:
-            feature:
-
-        Returns:
-
-        """
         return self.woe_dict[feature].split
 
     def get_woe(self, feature_name: Hashable):
-        """
-        Геттер WoE значений
-
-        Args:
-            feature_name: Название признака
-
-        Returns:
-
-        """
         if self.private_features_type[feature_name] == "real":
             split = self.woe_dict[feature_name].split.copy()
             woe = self.woe_dict[feature_name].cod_dict
@@ -398,28 +389,28 @@ class AutoWoE:
         """
 
         Args:
-        train: pandas.DataFrame
-            Обучающая выборка
-        target_name: str
-            Имя колонки с целевой переменной
-        features_type: dict
-            Словарь с типами признаков,
-            "cat" - категориальный, "real" - вещественный, "date" - для даты
-        group_kf:
-           Имя колнки для GroupKFold
-        max_bin_count: dict
-            Имя признака -> максимальное числов бинов
-        features_monotone_constraints: dict
-            Словарь с ограничениями на монотонность
-            "-1" - признак монотонно убывает при возрастании целевой переменной
-            "0" - нет ограничения на завсисимость. Переключается на auto в случае monotonic=True
-            "1" - признак монотонно возрастает при возрастании целевой переменной
-            "auto" - хочу монотонно, но не знаю как
-            Для категориальных признаков указывать ничего не надо.
-        validation: pandas.DataFrame
-            Дополнительная валидационная выборка, используемая для выбора модели
-            На текущий момент поддерживается:
-            - отбор признаков по p-value
+            train: pandas.DataFrame
+                Training sample
+            target_name: str
+                Target variable's column name
+            features_type: dict
+                Dictionary with feature types,
+                "cat" - categorical, "real" - real, "date" - for date
+            group_kf:
+                Column name for GroupKFold
+            max_bin_count: dict
+                Dictionary with feature name -> maximum bin quantity values
+            features_monotone_constraints: dict
+                Dictionary with monotonic constraints for features
+                "-1" - the feature values decreases monotonically when the target variable's value increases
+                "0" - no limitations. Switches to auto in case of monotonic = True
+                "1" - the feature values monotonically increases when the target variable's value increases
+                "auto" - the feature values monotonically changes.
+                Not specified for categorical features.
+            validation: pandas.DataFrame
+                Additional validation sample used for model selection
+                Currently supported:
+                - feature selection by p-value
 
         Returns:
 
@@ -536,17 +527,16 @@ class AutoWoE:
                               features_monotone_constraints: str, max_bin_count: int,
                               cat_alpha: float = 1.) -> SplitType:
         """
-        Метод для кодирования признаков поодиночке
 
         Args:
             feature_name:
-            train_f: обучающая выборка
-            features_monotone_constraints: характер монотонности разюиения
-            max_bin_count: максимальное число бинов в биннинге
-            cat_alpha: регуляризация для категорий
+            train_f:
+            features_monotone_constraints:
+            max_bin_count:
+            cat_alpha:
 
         Returns:
-            None, list
+
         """
         train_f = train_f.reset_index(drop=True)
         logger.info(f"{feature_name} processing...")
@@ -619,15 +609,11 @@ class AutoWoE:
                         spec_values: Dict,  # TODO: ref
                         folds_codding: bool) -> pd.DataFrame:
         """
-        Кодирование train датасета
 
         Args:
-        train: pandas.DataFrame
-            DataFrame для преобразований
-        spec_values: dict
-            словарь для работы с нанами
-        folds_codding: bool
-           Флаг WoE кодирования по фолдам
+            train:
+            spec_values:
+            folds_codding:
 
         Returns:
 
@@ -652,7 +638,6 @@ class AutoWoE:
 
     def _clf_fit(self, data_enc, features, feature_history=None, valid_enc=None, valid_target=None) -> dict:
         """
-        Финальное переобучение модели
 
         Args:
             data_enc:
@@ -705,13 +690,13 @@ class AutoWoE:
 
     def test_encoding(self, test: pd.DataFrame, feats: Optional[List[str]] = None) -> pd.DataFrame:
         """
-        Подготовка тестового датасета для обучения
+        WoE encoding on test dataset
 
         Args:
-        test: pandas.DataFrame
-            Тестовый датасет
-        feats: list or None
-            features names
+            test: pandas.DataFrame
+                Тестовый датасет
+            feats: list or None
+                features names
 
         Returns:
 
@@ -750,11 +735,10 @@ class AutoWoE:
 
     def predict_proba(self, test: pd.DataFrame) -> np.ndarray:
         """
-        Сделать предсказание на тестовый датасет
+        Make predictions for a test dataset
 
         Args:
-        test: pd.DataFrame
-            Тестовый датасет предобработанный для предсказания
+            test: pd.DataFrame
 
         Returns:
             np.ndarray
@@ -765,7 +749,7 @@ class AutoWoE:
 
     def get_model_represenation(self):
         """
-        Получить скоркарту
+        Get scorecard
 
         Returns:
 
@@ -800,15 +784,13 @@ class AutoWoE:
 
     def get_sql_inference_query(self, table_name: str) -> str:
         """
-        Сгенерировать SQL-запрос для прогноза по данным, содержащимся в таблице в БД
+        Generate SQL query
 
         Args:
-        table_name: str
-            Имя таблицы в БД, содержащей данные, на которых требуется сделать прогноз
+            table_name: str
 
         Returns:
             query_string: str
-                SQL-запрос для предсказания результатов по таблице в БД
         """
         model_data = self.get_model_represenation()
         return get_sql_query(model_data, table_name)

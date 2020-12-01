@@ -8,7 +8,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import BaseCrossValidator
 from sklearn.svm import l1_min_c
 
-from ..logger import get_logger
+from ..logging import get_logger
 
 logger = get_logger(__name__)
 

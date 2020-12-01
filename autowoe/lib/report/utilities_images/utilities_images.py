@@ -1,9 +1,9 @@
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import pandas as pd
 from typing import Union, List
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 from sklearn.metrics import roc_auc_score, roc_curve
 
 
@@ -26,7 +26,7 @@ def plot_roc_curve_image(y_true, y_pred, path):
     lw = 2
     plt.plot(fpr_reg, tpr_reg, color='darkorange',
              lw=lw, label='WhiteBox модель (GINI = {:.3f})'.format(2 * auc_score_reg - 1))
-    plt.plot([0, 1], [0, 1], color='red', lw=lw, linestyle='--', label='Случайная модель')
+    plt.plot([0, 1], [0, 1], color='red', lw=lw, linestyle='--', label='Random Model')
     plt.xlim([-0.05, 1.05])
     plt.ylim([-0.05, 1.05])
     plt.xlabel('False Positive Rate')
@@ -64,7 +64,7 @@ def plot_double_roc_curve(train_y_true, train_y_pred, test_y_true, test_y_pred, 
         lw=lw,
         label='По данным test (GINI = {:.3f})'.format(2 * test_auc_score_reg - 1)
     )
-    plt.plot([0, 1], [0, 1], color='red', lw=lw, linestyle='--', label='Случайная модель')
+    plt.plot([0, 1], [0, 1], color='red', lw=lw, linestyle='--', label='Random Model')
     plt.xlim([-0.05, 1.05])
     plt.ylim([-0.05, 1.05])
     plt.xlabel('False Positive Rate')
@@ -88,7 +88,7 @@ def plot_roc_curve_feature_image(feature_name, y_true, y_pred, path):
     lw = 2
     plt.plot(fpr_reg, tpr_reg, color='darkorange',
              lw=lw, label=feature_name + ' (GINI = {:.3f})'.format(2 * auc_score_reg - 1))
-    plt.plot([0, 1], [0, 1], color='red', lw=lw, linestyle='--', label='Случайная модель')
+    plt.plot([0, 1], [0, 1], color='red', lw=lw, linestyle='--', label='Random Model')
     plt.xlim([-0.05, 1.05])
     plt.ylim([-0.05, 1.05])
     plt.xlabel('False Positive Rate')
@@ -97,7 +97,7 @@ def plot_roc_curve_feature_image(feature_name, y_true, y_pred, path):
     plt.xticks(np.arange(0, 1.01, 0.05), rotation=45)
     plt.yticks(np.arange(0, 1.01, 0.05))
     plt.grid(color='gray', linestyle='-', linewidth=1)
-    plt.title('ROC кривая(GINI = {:.3f})'.format(2 * auc_score_reg - 1) + f" для признака {feature_name}")
+    plt.title('ROC curve(GINI = {:.3f})'.format(2 * auc_score_reg - 1) + f" of feature {feature_name}")
     plt.savefig(path, bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.close()
 
@@ -108,9 +108,9 @@ def plot_model_weights(features, path):
     ax = fig.add_axes([0, 0, 1, 1])
     ax.bar(features.index, features.values, color='g')
     lgd = plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
-    plt.title('Параметры модели', fontsize=28)
-    plt.xlabel('Признаки', fontsize=20)
-    plt.ylabel('Значения коэффициентов регрессии', fontsize=20)
+    plt.title('Model coefs', fontsize=28)
+    plt.xlabel('Features', fontsize=20)
+    plt.ylabel('Coef values', fontsize=20)
     plt.xticks(fontsize=15, rotation=90)
     plt.yticks(fontsize=15)
     plt.savefig(path, bbox_extra_artists=(lgd,), bbox_inches='tight')
@@ -123,9 +123,9 @@ def plot_feature_split(feature_name, features, path):
     ax = fig.add_axes([0, 0, 1, 1])
     ax.bar(features.index, features.values, color='g')
     lgd = plt.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=2)
-    plt.title("Разбиение признака " + feature_name + " на бины и WoE значения в них")
-    plt.xlabel('Бины', fontsize=20)
-    plt.ylabel('WoE значения', fontsize=20)
+    plt.title("Split of feature " + feature_name + " and woe values")
+    plt.xlabel('Bins', fontsize=20)
+    plt.ylabel('WoE values', fontsize=20)
     plt.xticks(fontsize=15)
     plt.yticks(fontsize=15)
     plt.savefig(path, bbox_extra_artists=(lgd,), bbox_inches='tight')
