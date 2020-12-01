@@ -1,5 +1,4 @@
 import collections
-import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from multiprocessing import Pool
@@ -242,7 +241,7 @@ class AutoWoE:
                 if new_arg is not None:
                     msg = msg + ' Value will be set to {0} parameter, but exception will be raised in future.'.format(new_arg)
                     self._params[new_arg] = kwargs[deprecated_arg]
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
+                logger.warning(msg, DeprecationWarning, stacklevel=2)
 
         self.woe_dict = None
         self.train_df = None

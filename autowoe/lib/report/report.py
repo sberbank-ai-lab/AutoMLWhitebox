@@ -1,6 +1,5 @@
 import itertools
 import os
-import warnings
 from collections import defaultdict
 from copy import deepcopy
 from functools import wraps
@@ -18,7 +17,10 @@ from .utilities_images.utilities_images import plot_model_weights, \
     plot_backlash_check, plot_binned, plot_binned_stats, plot_corr_heatmap, plot_mean_target, \
     plot_grouped, plot_bars
 from ..autowoe import AutoWoE
+from ..logging import get_logger
 from ..utilities.refit import calc_p_val_on_valid
+
+logger = get_logger(__name__)
 
 
 class ReportDeco:
@@ -49,7 +51,7 @@ class ReportDeco:
 
     @property
     def __auto_woe(self) -> AutoWoE:
-        warnings.warn("""Attribute autowoe should not be explisitly called anymore. 
+        logger.warnning("""Attribute autowoe should not be explisitly called anymore. 
         Access to autowoe attributes is now avaliable via ReportDeco __getattr__ method""", DeprecationWarning, stacklevel=2)
 
         return self._auto_woe
