@@ -1,3 +1,4 @@
+import logging
 from copy import deepcopy
 from typing import Union, Dict, List, Tuple, Hashable
 
@@ -18,6 +19,16 @@ feature = Union[str, int, float]
 f_list_type = List[feature]
 
 logger = get_logger(__name__)
+
+root_logger = logging.getLogger()
+level = root_logger.getEffectiveLevel()
+
+if level in (logging.CRITICAL, logging.ERROR, logging.WARNING):
+    verbose_eval = False
+elif level == logging.INFO:
+    verbose_eval = 100
+else:
+    verbose_eval = 10
 
 
 def nan_constant_selector(data: DataFrame, features_type: Dict[Hashable, str],
@@ -102,8 +113,9 @@ def feature_imp_selector(data: DataFrame, features_type: Dict[Hashable, str], ta
                                categorical_feature=categorical_feature
                                )
 
-        clf = lgb.train(params=params, train_set=lgb_train, verbose_eval=1000,
-                        early_stopping_rounds=10, valid_sets=[lgb_test], valid_names=['val_set'])
+        clf = lgb.train(params=params, train_set=lgb_train,
+                        early_stopping_rounds=10, valid_sets=[lgb_test], valid_names=['val_set'],
+                        verbose_eval=verbose_eval)
         imp_dict = dict(zip(train.drop(target_name, axis=1).columns, clf.feature_importance()))
     elif imp_type == "perm_imp":
         clf = lgb.LGBMClassifier(**params)
@@ -121,7 +133,7 @@ def feature_imp_selector(data: DataFrame, features_type: Dict[Hashable, str], ta
         clf.fit(X=train.drop(target_name, axis=1).astype(np.float32).values, y=train[target_name].values,
                 eval_set=[(test_, test[target_name].values)],
                 eval_names=['val_set'], eval_metric='auc', early_stopping_rounds=10,
-                verbose=1000
+                verbose=verbose_eval
                 )
         _, score_decreases = get_score_importances(score_func=lambda x, y: roc_auc_score(y, clf.predict_proba(x)[:, 1]),
                                                    X=test_,
