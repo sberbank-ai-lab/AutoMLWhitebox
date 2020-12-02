@@ -8,7 +8,8 @@ This is the repository for **AutoWoE** library, developed by Sber AI Lab AutoML 
 
 **Authors:** Vakhrushev Anton, Grigorii Penkin
 
-**Library setup** can be done by one of two scenarios below:
+**Library setup** can be done by one of three scenarios below:
+- `pip install autowoe` for installation from PyPI
 - `bash build_package.sh` for library installation into automatically created virtual environment and WHL files building
 - pre-generated WHL file from specific release 
 
