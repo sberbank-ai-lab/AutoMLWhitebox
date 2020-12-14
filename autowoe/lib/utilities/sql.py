@@ -1,5 +1,6 @@
 from typing import Dict, List
 from io import StringIO
+from collections import defaultdict
 
 
 def preprocess_features(model_data: Dict, table_name: str) -> List[str]:
@@ -24,8 +25,8 @@ def preprocess_features(model_data: Dict, table_name: str) -> List[str]:
         else:
             big_cats, spec_value = woe['spec_cat']
             big_cats_str = ','.join(map(lambda x: f"'{x}'", big_cats))
-            string = f"""(CASE WHEN {feature} IS NULL OR LOWER(CAST({feature} AS {str_type})) = 'nan' 
-THEN NULL WHEN {feature} NOT IN ({big_cats_str}) THEN '{spec_value}' ELSE CAST({feature} AS {str_type}) END) AS {feature}"""
+            string = f"(CASE WHEN {feature} IS NULL OR LOWER(CAST({feature} AS {str_type})) = 'nan' " + \
+f"THEN NULL WHEN {feature} NOT IN ({big_cats_str}) THEN '{spec_value}' ELSE CAST({feature} AS {str_type}) END) AS {feature}"
 
         is_not_final = i != len(model_data['features']) - 1
         result.append('    ' + string + (',' if is_not_final else ''))
@@ -70,8 +71,15 @@ def transform_features(model_data: Dict, from_source: List[str]) -> List[str]:
                 nan_case = 0.0
 
             spec_case = ' '.join([f"WHEN {feature} = '{k}' THEN {v}" for k, v in woe['spec_cod'].items() if k != nan_value])
-            cat_map = [(cat, woe['cod_dict'][woe_idx]) for cat, woe_idx in woe['cat_map'].items() if cat != nan_value]
-            map_str = ' '.join([f"WHEN {feature} = '{x[0]}' THEN {x[1]}" for x in cat_map])
+            
+            cat_map = defaultdict(list)
+            for cat, woe_idx in woe['cat_map'].items():
+                if cat != nan_value and cat not in woe['spec_cod']:
+                    cat_map[woe_idx].append(cat)
+            
+            cat_map = {woe_idx: ','.join(map(lambda x: f"'{x}'", cat_list)) for woe_idx, cat_list in cat_map.items()}
+
+            map_str = ' '.join([f"WHEN {feature} IN ({cats}) THEN {woe['cod_dict'][woe_idx]}" for woe_idx, cats in cat_map.items()])
 
             if len(cat_map) > 0:
                 else_case = nan_case
