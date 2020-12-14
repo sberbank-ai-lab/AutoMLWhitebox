@@ -51,28 +51,38 @@ def transform_features(model_data: Dict, from_source: List[str]) -> List[str]:
         nan_value = woe['nan_value']
 
         if woe['f_type'] == 'real':
-            if len(woe['splits']) == 0:
-                string = f"{woe['cod_dict'][0]}"
-            else:
+            map_str = ''
+            if len(woe['splits']) > 0:
                 splits = [(woe['splits'][i], woe['cod_dict'][i]) for i in range(len(woe['splits']))]
                 map_str = ' '.join([f'WHEN {feature} <= {x[0]} THEN {x[1]}' for x in splits])
-                else_case = woe['cod_dict'][len(woe['splits'])]
-                nan_case = woe['spec_cod'][nan_value] if nan_value in woe['spec_cod'] else 0.0
-                string = f"CASE WHEN {feature} IS NULL THEN {nan_case} {map_str} ELSE {else_case} END"
+
+            nan_case = woe['spec_cod'][nan_value] if nan_value in woe['spec_cod'] else 0.0
+            else_case = woe['cod_dict'][len(woe['splits'])]
+            if map_str:
+                map_str += ' '
+            string = f"CASE WHEN {feature} IS NULL THEN {nan_case} {map_str}ELSE {else_case} END"
         else:
-            if len(woe['cat_map']) == 0:
-                string = f"{woe['cod_dict'][0]}"
+            if nan_value in woe['spec_cod']:
+                nan_case = woe['spec_cod'][nan_value]
+            elif nan_value in woe['cat_map']:
+                nan_case = woe['cod_dict'][woe['cat_map'][nan_value]]
             else:
-                cat_map = [(cat, woe['cod_dict'][woe_idx]) for cat, woe_idx in woe['cat_map'].items()]
-                map_str = ' '.join([f"WHEN {feature} = '{x[0]}' THEN {x[1]}" for x in cat_map])
-                spec_case = ' '.join(map(lambda x: f"WHEN {feature} = '{x[0]}' THEN {x[1]}", woe['spec_cod'].items()))
-                if nan_value in woe['spec_cod']:
-                    nan_case = woe['spec_cod'][nan_value]
-                elif nan_value in woe['cat_map']:
-                    nan_case = woe['cod_dict'][woe['cat_map'][nan_value]]
-                else:
-                    nan_case = 0.0
-                string = f"CASE WHEN {feature} IS NULL THEN {nan_case} {spec_case} {map_str} ELSE {nan_case} END"
+                nan_case = 0.0
+
+            spec_case = ' '.join([f"WHEN {feature} = '{k}' THEN {v}" for k, v in woe['spec_cod'].items() if k != nan_value])
+            cat_map = [(cat, woe['cod_dict'][woe_idx]) for cat, woe_idx in woe['cat_map'].items() if cat != nan_value]
+            map_str = ' '.join([f"WHEN {feature} = '{x[0]}' THEN {x[1]}" for x in cat_map])
+
+            if len(cat_map) > 0:
+                else_case = nan_case
+            else:
+                else_case = f"{woe['cod_dict'][0]}"
+
+            if spec_case:
+                spec_case += ' '
+            if map_str:
+                map_str += ' '
+            string = f"CASE WHEN {feature} IS NULL THEN {nan_case} {spec_case}{map_str}ELSE {else_case} END"
 
         is_not_final = i != len(model_data['features']) - 1
         result.append(f"    ({string}) AS {feature}" + (',' if is_not_final else ''))
