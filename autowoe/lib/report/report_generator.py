@@ -27,7 +27,7 @@ class ReportGenerator:
         Returns:
 
         """
-        with open(os.path.join(report_params['output_path'], 'autowoe_report.html'), "w") as f:
+        with open(os.path.join(report_params['output_path'], 'autowoe_report.html'), "w", encoding='utf-8') as f:
             f.write(self.base_template.render(
                 report_name=str(report_params['report_name']),
                 report_version=str(report_params['report_version_id']),
