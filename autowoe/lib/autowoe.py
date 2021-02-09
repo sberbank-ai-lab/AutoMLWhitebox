@@ -18,7 +18,7 @@ from .selectors.selector_last import Selector
 from .types_handler.types_handler import TypesHandler
 from .utilities.cv_split_f import cv_split_f
 from .utilities.refit import refit_reg, refit_simple
-from .utilities.sql import get_sql_query
+from .utilities.sql import get_sql_query, get_teradata_query
 from .woe.woe import WoE
 
 logger = get_logger(__name__)
@@ -793,3 +793,16 @@ class AutoWoE:
         """
         model_data = self.get_model_represenation()
         return get_sql_query(model_data, table_name)
+
+    def get_teradata_inference_query(self, table_name: str) -> str:
+        """
+        Generate SQL query
+
+        Args:
+            table_name: str
+
+        Returns:
+            query_string: str
+        """
+        model_data = self.get_model_represenation()
+        return get_teradata_query(model_data, table_name)
