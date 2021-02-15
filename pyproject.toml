@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "AutoWoE"
-version = "1.2.2"
+version = "1.2.3"
 description = "Library for automatic interpretable model building (Whitebox AutoML)"
 authors = ["Vakhrushev Anton <AGVakhrushev@sberbank.ru>"]
 readme = "README.md"

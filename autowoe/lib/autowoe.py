@@ -18,7 +18,7 @@ from .selectors.selector_last import Selector
 from .types_handler.types_handler import TypesHandler
 from .utilities.cv_split_f import cv_split_f
 from .utilities.refit import refit_reg, refit_simple
-from .utilities.sql import get_sql_query
+from .utilities.sql import get_sql_inference_query
 from .woe.woe import WoE
 
 logger = get_logger(__name__)
@@ -239,7 +239,8 @@ class AutoWoE:
             if deprecated_arg in kwargs:
                 msg = 'Parameter {0} is deprecated.'.format(deprecated_arg)
                 if new_arg is not None:
-                    msg = msg + ' Value will be set to {0} parameter, but exception will be raised in future.'.format(new_arg)
+                    msg = msg + ' Value will be set to {0} parameter, but exception will be raised in future.'.format(
+                        new_arg)
                     self._params[new_arg] = kwargs[deprecated_arg]
                 logger.warning(msg, DeprecationWarning, stacklevel=2)
 
@@ -440,7 +441,8 @@ class AutoWoE:
         # Первичный отсев по важности
         features_before = features_after
         train_, self._private_features_type = feature_imp_selector(train_, self.private_features_type, target_name,
-                                                                   imp_th=self.params['imp_th'], imp_type=self.params['imp_type'],
+                                                                   imp_th=self.params['imp_th'],
+                                                                   imp_type=self.params['imp_type'],
                                                                    select_type=self.params['select_type'],
                                                                    process_num=self.params['n_jobs'])
         features_after = set(self._private_features_type.keys())
@@ -781,15 +783,34 @@ class AutoWoE:
 
         return {'features': result, 'intercept': float(self.intercept)}
 
-    def get_sql_inference_query(self, table_name: str) -> str:
+    def get_sql_inference_query(self, table_name, round_digits=3, round_features=5, output_name='PROB', alias='WOE_TAB',
+                                bypass_encoded=True, template=None,
+                                nan_pattern_numbers="({0} IS NULL OR {0} = 'NaN')",
+                                nan_pattern_category="({0} IS NULL OR LOWER(CAST({0} AS VARCHAR(50))) = 'nan')",
+                                preprocessing=None) -> str:
         """
-        Generate SQL query
+        Get inference query for whitebox model
 
         Args:
-            table_name: str
+            table_name: Source table name that should be passed into query
+            round_digits: round woe and coefs to simplify query. Note: may be little accuracy decrease
+            round_features: round features to simplify query. Note: may be little accuracy decrease
+            output_name: name of output prediction feature
+            alias: alias of woe_table in query
+            bypass_encoded: add woe encoding to the result
+            template: 'td' for teradata or None
+            nan_pattern_numbers: string value representing how to check nulls for numbers in SQL.
+                For ex. "({0} IS NULL OR {0} = 'NaN')"
+            nan_pattern_category: string value representing how to check nulls for categories in SQL.
+            preprocessing: due to possible difference in schemes between SQL database and csv file user may
+                specify dict how to preprocess each feature. For ex. if feature Feat_0 was treated as integer by
+                model, but is actually string in database schema, you may pass
+                preprocessing = {'Feat_0': CAST({0} as INTEGER)}
 
         Returns:
-            query_string: str
+
         """
-        model_data = self.get_model_represenation()
-        return get_sql_query(model_data, table_name)
+
+        return get_sql_inference_query(self, table_name, round_digits, round_features, output_name, alias,
+                                       bypass_encoded, template, nan_pattern_numbers, nan_pattern_category,
+                                       preprocessing)
