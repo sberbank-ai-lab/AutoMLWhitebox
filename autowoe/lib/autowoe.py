@@ -162,18 +162,10 @@ class AutoWoE:
                 Number of folds for feature selection / encoding, etc.
             n_jobs: int > 0
                 Number of CPU cores to run in parallel.
-            l1_base_step: real > 0
+            l1_grid_size: real > 0
                 Grid size in l1 regularization
-            l1_exp_step: real > 1
+            l1_exp_scale: real > 1
                 Grid scale in l1 regularization
-            population_size: None, int > 0
-                Feature selection type in the selector. If the value is "None" then L1 boost is used.
-                If "int" is specified, then a standard step will be used for
-                the number of random subsamples indicated by this value.
-                Can be generalized to genetic algorithm.
-            feature_groups_count: int > 0
-                The number of groups in the genetic algorithm. Its effect is visible only when
-                population_size > 0
             imp_type: str
                 Feature importances type. Feature_imp and perm_imp are available.
                 It is used to sort the features at the first and at the final
@@ -242,7 +234,7 @@ class AutoWoE:
                     msg = msg + ' Value will be set to {0} parameter, but exception will be raised in future.'.format(
                         new_arg)
                     self._params[new_arg] = kwargs[deprecated_arg]
-                logger.warning(msg, DeprecationWarning, stacklevel=2)
+                logger.warning(msg, DeprecationWarning)
 
         self.woe_dict = None
         self.train_df = None

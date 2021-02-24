@@ -38,7 +38,7 @@ def prepare_number(woe_dict, name: str, r_val: int = 3, round_features: int = 5,
         enc_val = round(woe_dict.cod_dict[grp], r_val)
         feature += """  WHEN {0} <= {1} THEN {2}\n""".format(f_val, round(val, round_features), enc_val)
     # create last else val
-    enc_val = round(woe_dict.cod_dict[grp + 1], r_val)
+    enc_val = round(woe_dict.cod_dict[len(woe_dict.split)], r_val)
     feature += """  ELSE {1}\nEND AS {0}""".format(name, enc_val, )
 
     return feature
