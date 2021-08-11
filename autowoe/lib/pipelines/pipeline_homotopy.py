@@ -1,56 +1,54 @@
+# noqa: D100
+
+import lightgbm as lgb
 import numpy as np
 import pandas as pd
-import lightgbm as lgb
 
 from sklearn.model_selection import StratifiedKFold
+
+from autowoe.lib.utilities.utils import TaskType
 from autowoe.lib.utilities.utils import flatten
 
 
 class HTransform:
-    """
+    """Homotopy transform.
+
+    Args:
+        x: Feature.
+        y: Target.
+        cv_splits: Number of splits.
+
     """
 
-    def __init__(self, x: pd.Series, y: pd.Series, cv_splits: int = 5):
-        """
-
-        Args:
-            x:
-            y:
-            cv_splits:
-        """
+    def __init__(self, task: TaskType, x: pd.Series, y: pd.Series, cv_splits: int = 5):
         self.x, self.y = x, y
+        self._task = task
+        # TODO: for what ?
         self.cv = self._get_cv(cv_splits)
 
     @staticmethod
     def _get_cv(cv_splits: int) -> StratifiedKFold:
-        """
-
-        Args:
-            cv_splits:
-
-        Returns:
-
-        """
         return StratifiedKFold(n_splits=cv_splits, random_state=323, shuffle=True)
 
     def __call__(self, tree_params: dict) -> np.ndarray:
-        """
-        Функция, возвращающая границы разбиения по переданной выборки и параметрам
+        """Return the boundaries of the split by the transmitted sample and parameters.
 
         Args:
             tree_params: dict or lightgbm tree params
 
         Returns:
+            Splitting.
 
         """
         default_tree_params = {
             "boosting_type": "rf",
-            "objective": "binary",
+            "objective": "binary" if self._task == TaskType.BIN else "regression",
             "bagging_freq": 1,
             "bagging_fraction": 0.999,
             "feature_fraction": 0.999,
             "bagging_seed": 323,
-            "verbosity": -1}
+            "verbosity": -1,
+        }
 
         unite_params = {**default_tree_params, **tree_params}
         lgb_train = lgb.Dataset(self.x.values.astype(np.float32)[:, np.newaxis], label=self.y)
