@@ -1,6 +1,9 @@
+# flake8: noqa
+
 import logging
 import sys
 import warnings
+
 
 logging.captureWarnings(True)
 

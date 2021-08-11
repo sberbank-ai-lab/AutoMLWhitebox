@@ -1,35 +1,37 @@
+"""Process nan values."""
+
 from copy import deepcopy
-from typing import Dict, Union, List, Tuple, Hashable
+from typing import Dict
+from typing import Hashable
+from typing import List
+from typing import Tuple
+from typing import Union
 
 import pandas as pd
+
 
 feature = Union[str, int, float]
 f_list_type = List[feature]
 
-cat_merge_cases = {
-
-    'to_woe_0': '__Small_0__',
-    'to_maxfreq': '__Small_maxfreq__',
-    'to_minp': '__Small_minp__',
-    'to_maxp': '__Small_maxp__',
-    'to_nan': 'Small_nan__'
-
+CAT_MERGE_CASES = {
+    "to_woe_0": "__Small_0__",
+    "to_maxfreq": "__Small_maxfreq__",
+    "to_minp": "__Small_minp__",
+    "to_maxp": "__Small_maxp__",
+    "to_nan": "Small_nan__",
 }
 
-nan_merge_cases = {
-
-    'to_woe_0': '__NaN_0__',
-    'to_maxfreq': '__NaN_maxfreq__',
-    'to_minp': '__NaN_minp__',
-    'to_maxp': '__NaN_maxp__',
-
+NAN_MERGE_CASES = {
+    "to_woe_0": "__NaN_0__",
+    "to_maxfreq": "__NaN_maxfreq__",
+    "to_minp": "__NaN_minp__",
+    "to_maxp": "__NaN_maxp__",
 }
 
 
 class SmallNans:
-    """
-    Классс для обработки nan (вещественные признаки)
-    для обработки маленьких групп и nan (категориальные признаки)
+    """Классс для обработки nan (вещественные признаки) для обработки маленьких групп и nan (категориальные признаки).
+
     Вещественные признаки в отдельную группу. Если сэмплов меньше, чем
     th_nan, то присавиваем woe 0. И на train и на test
     --------------------------------------------------------------------------------
@@ -37,19 +39,22 @@ class SmallNans:
     то кодируем ее отельным числом. Если nan то кодируем по аналогии с
     вещественным случаем с помощью th_nan. Если на тесте встречаем категорию,
     которой не было на train, то отправляем ее в nan, маленькие категории, в woe со значением 0.
+
+    Args:
+        th_nan: Threshold for NaN-values process.
+        th_cat: Threshold for category values process.
+        cat_merge_to:
+        nan_merge_to:
+
     """
 
-    def __init__(self, th_nan: Union[int, float] = 32, th_cat: Union[int, float] = 32,
-                 cat_merge_to: str = 'to_woe_0', nan_merge_to: str = 'to_woe_0'
-                 ):
-        """
-
-        Args:
-            th_nan:
-            th_cat:
-            cat_merge_to:
-            nan_merge_to:
-        """
+    def __init__(
+        self,
+        th_nan: Union[int, float] = 32,
+        th_cat: Union[int, float] = 32,
+        cat_merge_to: str = "to_woe_0",
+        nan_merge_to: str = "to_woe_0",
+    ):
         self._th_nan = th_nan
         self._th_cat = th_cat
         self._cat_merge_to = cat_merge_to
@@ -60,16 +65,17 @@ class SmallNans:
         self.all_encoding = None
         self._spec_values = None
 
-    def fit_transform(self, train: pd.DataFrame, features_type: Dict[Hashable, str]
-                      ) -> Tuple[pd.DataFrame, Dict[Hashable, Dict[str, float]]]:
-        """
+    def fit_transform(
+        self, train: pd.DataFrame, features_type: Dict[Hashable, str]
+    ) -> Tuple[pd.DataFrame, Dict[Hashable, Dict[str, float]]]:
+        """Fit/transform.
 
         Args:
-            train:
-            features_type: Dict[Hashable, str]
-                Типы признаков "cat" - категориальный, "real" - вещественный
+            train: Dataset.
+            features_type: Type of features. {"cat" - category, "real" - real}
 
         Returns:
+            Processed dataset, special values.
 
         """
         train_ = deepcopy(train)
@@ -79,6 +85,7 @@ class SmallNans:
         self._features_type = features_type
         for col in self._features_type:
             d = dict()
+
             if self._features_type[col] == "cat":
                 vc = train_[col].value_counts()
                 big_cat = set(vc.index)
@@ -86,7 +93,7 @@ class SmallNans:
                 vc_sum, small_cat = vc.sum(), set(vc.index)
                 if vc_sum < self._th_nan:
                     # Случай когда суммарно всех небольших категорий все равно мало
-                    enc_type = cat_merge_cases[self._cat_merge_to]
+                    enc_type = CAT_MERGE_CASES[self._cat_merge_to]
                     fill_val = 0 if enc_type == "__Small_0__" else None
                     d[enc_type] = fill_val
                 else:
@@ -98,12 +105,11 @@ class SmallNans:
                 #  Небольшие категории, которые будем кодировать отдельно
 
             nan_count = train_[col].isna().sum()
-            if nan_count < self._th_nan:
 
-                enc_type = nan_merge_cases[self._nan_merge_to]
+            if nan_count < self._th_nan:
+                enc_type = NAN_MERGE_CASES[self._nan_merge_to]
                 fill_val = 0 if enc_type == "__NaN_0__" else None
                 d[enc_type] = fill_val
-
             else:
                 enc_type = "__NaN__"  # Большое число пропусков. Кодируем как обычную категорию
                 # исключаем NaN из специальных значений для категорий
@@ -122,13 +128,14 @@ class SmallNans:
         return train_, spec_values
 
     def transform(self, test: pd.DataFrame, features: f_list_type):
-        """
+        """Transform dataset.
 
         Args:
-            test: Тестовая выборка
-            features: Список признаков для теста
+            test: Test dataset.
+            features: List of features for processing.
 
         Returns:
+            Processed dataset.
 
         """
         test_ = test[features].copy()

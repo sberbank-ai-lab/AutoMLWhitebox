@@ -1,18 +1,24 @@
-import pandas as pd
-import numpy as np
+"""Type feature checkers."""
 
-from typing import Optional, Tuple, cast
+from typing import Optional
+from typing import Tuple
+from typing import cast
+
+import numpy as np
+import pandas as pd
+
 
 F_UNIQUE = 5
 
 
 def dates_checker(feature: pd.Series) -> bool:
-    """
+    """Check that feature belongs to the datetime.
 
     Args:
-        feature:
+        feature: Values.
 
     Returns:
+        Flag.
 
     """
     try:
@@ -27,16 +33,19 @@ def dates_checker(feature: pd.Series) -> bool:
         raise ValueError("Something is wrong with object types")
 
 
-def dates_handler(feature: pd.Series,
-                  feature_type: Tuple[Optional[str], Tuple[str]] = (None, ("wd", "m", "y", "d"))) -> Tuple:
-    """
+def dates_handler(
+    feature: pd.Series, feature_type: Tuple[Optional[str], Tuple[str, ...]] = (None, ("wd", "m", "y", "d"))
+) -> Tuple:
+    """Handle datetime feature.
+
     feature_type ("%Y%d%m", ("m", "d", "wd", "h", "min")), (None, ("m", "d", "wd", "h", "min"))
 
     Args:
-        feature: Колонка для парсинга
-        feature_type:
+        feature: Datetime values.
+        feature_type: Tuple of date format and seasonality.
 
     Returns:
+        Processed datetime, feature_type.
 
     """
     date_format = feature_type[0]
@@ -51,7 +60,7 @@ def dates_handler(feature: pd.Series,
         "d": lambda x: x.day,
         "wd": lambda x: x.weekday(),
         "h": lambda x: x.hour,
-        "min": lambda x: x.minute
+        "min": lambda x: x.minute,
     }
 
     new_features = []
@@ -67,13 +76,13 @@ def dates_handler(feature: pd.Series,
 
 
 def cat_checker(feature: pd.Series) -> bool:
-    """
-    Выделение категорий
+    """Check that feature belongs to the category.
 
     Args:
-        feature:
+        feature: Values.
 
     Returns:
+        Flag.
 
     """
     if feature.dtype in [object, str, np.str]:
