@@ -9,9 +9,37 @@ This is the repository for **AutoWoE** library, developed by Sber AI Lab AutoML 
 **Authors:** Vakhrushev Anton, Grigorii Penkin
 
 **Library setup** can be done by one of three scenarios below:
-- `pip install autowoe` for installation from PyPI
-- `bash build_package.sh` for library installation into automatically created virtual environment and WHL files building
-- pre-generated WHL file from specific release 
+
+1. Installation from PyPI:
+```bash
+pip install autowoe
+```
+2. Installation from source code
+
+First of all you need to install [git](https://git-scm.com/downloads) and [poetry](https://python-poetry.org/docs/#installation).
+
+```bash
+
+# Load LAMA source code
+git clone https://github.com/sberbank-ai-lab/AutoMLWhitebox.git
+
+cd AutoMLWhiteBox/
+
+# !!!Choose only one item!!!
+
+# 1. Recommended: Create virtual environment inside your project directory
+poetry config virtualenvs.in-project true
+
+# 2. Global installation: Don't create virtual environment
+poetry config virtualenvs.create false --local
+
+# For more information read poetry docs
+
+# Install WhiteBox
+poetry install
+
+```
+
 
 **Usage tutorials** are in Jupyter notebooks in the repository root. For **parameters description** take a look at `parameters_info.md`.
 
