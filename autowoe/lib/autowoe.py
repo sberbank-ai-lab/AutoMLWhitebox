@@ -5,6 +5,7 @@ import collections
 from collections import OrderedDict
 from copy import deepcopy
 from multiprocessing import Pool
+from typing import Any
 from typing import Dict
 from typing import Hashable
 from typing import List
@@ -44,9 +45,10 @@ logger = get_logger(__name__)
 SplitType = Optional[Union[np.ndarray, List[float], Dict[int, int]]]
 
 
-def get_monotonic_constr(task: TaskType, name: str, train: pd.DataFrame, target: str):
+def get_monotonic_constr(task: TaskType, name: str, train: pd.DataFrame, target: str, spec_values: List[Any]):
     """Check monotonic constraint."""
     df = train[[target, name]].dropna()
+    df = df.loc[~df[name].isin(spec_values)]
     try:
         if task == TaskType.BIN:
             auc = roc_auc_score(df[target].values, df[name].values)
@@ -59,19 +61,13 @@ def get_monotonic_constr(task: TaskType, name: str, train: pd.DataFrame, target:
         return "0"
 
 
-_small_nan_set = {
-    "__NaN_0__",
-    "__NaN_maxfreq__",
-    "__NaN_maxp__",
-    "__NaN_minp__",
-    "__Small_0__",
-    "__Small_maxfreq__",
-    "__Small_maxp__",
-    "__Small_minp__",
-}
+SMALL_SET = {"__Small_0__", "__Small_maxfreq__", "__Small_maxp__", "__Small_minp__"}
 
+NAN_SET = {"__NaN_0__", "__NaN__", "__NaN_maxfreq__", "__NaN_maxp__", "__NaN_minp__"}
 
-_nan_set = {"__NaN_0__", "__NaN__", "__NaN_maxfreq__", "__NaN_maxp__", "__NaN_minp__"}
+SPEC_SET = {"__Spec_0__", "__Spec__", "__Spec_maxfreq__", "__Spec_maxp__", "__Spec_minp__"}
+
+SMALL_NAN_SPEC_SET = {*SMALL_SET, *NAN_SET, *SPEC_SET}
 
 
 class AutoWoE:
@@ -169,7 +165,7 @@ class AutoWoE:
             verbosity level
         debug: bool
             Debug mode
-            **kwargs:
+        **kwargs: Deprecated parameters.
 
     """
 
@@ -352,6 +348,7 @@ class AutoWoE:
         group_kf: Hashable = None,
         max_bin_count: Optional[Dict[str, int]] = None,
         features_monotone_constraints: Optional[Dict[str, str]] = None,
+        features_special_values: Optional[Dict[str, List[Any]]] = None,
     ):
         self.params = deepcopy(self._params)
 
@@ -376,6 +373,8 @@ class AutoWoE:
                 "min_gain_to_split": self.params["min_gains_to_split"],
             }
         )
+
+        self._features_special_values = features_special_values
 
         # составим features_type
         self._features_type = features_type
@@ -431,6 +430,7 @@ class AutoWoE:
         group_kf: Hashable = None,
         max_bin_count: Optional[Dict[str, int]] = None,
         features_monotone_constraints: Optional[Dict[str, str]] = None,
+        features_special_values: Optional[Dict[str, List[Any]]] = None,
         validation: Optional[pd.DataFrame] = None,
     ):
         """Train model.
@@ -447,11 +447,20 @@ class AutoWoE:
                 "1" - the feature values monotonically increases when the target variable's value increases
                 "auto" - the feature values monotonically changes.
                 Not specified for categorical features.
+            features_special_values: Special values of feature which will be processed like `NaN` or small categories.
             validation: Additional validation sample used for model selection. Currently supported:
                 - feature selection by p-value
 
         """
-        self._infer_params(train, target_name, features_type, group_kf, max_bin_count, features_monotone_constraints)
+        self._infer_params(
+            train,
+            target_name,
+            features_type,
+            group_kf,
+            max_bin_count,
+            features_monotone_constraints,
+            features_special_values,
+        )
 
         if group_kf:
             group_kf = train[group_kf].values
@@ -475,7 +484,7 @@ class AutoWoE:
         self.target = train_[target_name]
         self.feature_history = {key: None for key in self.private_features_type.keys()}
 
-        # Отбрасывание колонок с нанами
+        # Remove columns with huge ratio of NaN-values
         train_, self._private_features_type = feature_changing(
             self.feature_history,
             "NaN values",
@@ -489,7 +498,7 @@ class AutoWoE:
         # Target preprocessing
         self._preprocess_target()
 
-        # Первичный отсев по важности
+        # Remove featuters by model importance
         train_, self._private_features_type = feature_changing(
             self.feature_history,
             "Low importance",
@@ -628,7 +637,7 @@ class AutoWoE:
         if np.issubdtype(train_df.dtypes[feature_name], np.number):
             nan_index = []
         else:
-            sn_set = _small_nan_set if self.private_features_type[feature_name] == "cat" else _nan_set
+            sn_set = SMALL_NAN_SPEC_SET if self.private_features_type[feature_name] == "cat" else NAN_SET
             nan_index = train_df[feature_name].isin(sn_set)
             nan_index = np.where(nan_index.values)[0]
 

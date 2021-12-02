@@ -29,6 +29,14 @@ NAN_MERGE_CASES = {
 }
 
 
+SPEC_MERGE_CASES = {
+    "to_woe_0": "__Spec_0__",
+    "to_maxfreq": "__Spec_maxfreq__",
+    "to_minp": "__Spec_minp__",
+    "to_maxp": "__Spec_maxp__",
+}
+
+
 class SmallNans:
     """Классс для обработки nan (вещественные признаки) для обработки маленьких групп и nan (категориальные признаки).
 
