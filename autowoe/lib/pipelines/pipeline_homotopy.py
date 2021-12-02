@@ -6,6 +6,7 @@ import pandas as pd
 
 from sklearn.model_selection import StratifiedKFold
 
+from autowoe.lib.utilities.utils import TaskType
 from autowoe.lib.utilities.utils import flatten
 
 
@@ -19,8 +20,9 @@ class HTransform:
 
     """
 
-    def __init__(self, x: pd.Series, y: pd.Series, cv_splits: int = 5):
+    def __init__(self, task: TaskType, x: pd.Series, y: pd.Series, cv_splits: int = 5):
         self.x, self.y = x, y
+        self._task = task
         # TODO: for what ?
         self.cv = self._get_cv(cv_splits)
 
@@ -40,7 +42,7 @@ class HTransform:
         """
         default_tree_params = {
             "boosting_type": "rf",
-            "objective": "binary",
+            "objective": "binary" if self._task == TaskType.BIN else "regression",
             "bagging_freq": 1,
             "bagging_fraction": 0.999,
             "feature_fraction": 0.999,

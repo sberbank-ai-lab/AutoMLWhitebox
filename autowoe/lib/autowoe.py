@@ -693,7 +693,7 @@ class AutoWoE:
         tree_param = tree_opt(3)
         # значение monotone_constraints содержится в tree_params
         # подбор подходяшего сплита на бины
-        htransform = HTransform(train_df[feature_name], train_df[target_name])
+        htransform = HTransform(self._params["task"], train_df[feature_name], train_df[target_name])
         split = htransform(tree_param)
 
         #  Обратная операция к mean_target_encoding
