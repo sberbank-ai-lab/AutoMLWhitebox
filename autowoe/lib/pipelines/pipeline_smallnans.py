@@ -99,7 +99,7 @@ class SmallNans:
                 big_cat = set(vc.index)
                 vc = vc.loc[vc < self._th_cat]
                 vc_sum, small_cat = vc.sum(), set(vc.index)
-                if vc_sum < self._th_nan:
+                if vc_sum < self._th_nan:  # TODO: _th_nan -> _th_cat ?
                     # Случай когда суммарно всех небольших категорий все равно мало
                     enc_type = CAT_MERGE_CASES[self._cat_merge_to]
                     fill_val = 0 if enc_type == "__Small_0__" else None
