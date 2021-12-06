@@ -11,6 +11,7 @@ from typing import Hashable
 from typing import List
 from typing import Optional
 from typing import Sequence
+from typing import Tuple
 from typing import Union
 
 import numpy as np
@@ -24,8 +25,12 @@ from .cat_encoding.cat_encoding import CatEncoding
 from .logging import get_logger
 from .logging import verbosity_to_loglevel
 from .optimizer.optimizer import TreeParamOptimizer
+from .pipelines.pipeline_feature_special_values import CATEGORY_SPECIAL_SET
+from .pipelines.pipeline_feature_special_values import DEFAULT_OPTIONS_SPECIAL_VALUES
+from .pipelines.pipeline_feature_special_values import EXTEND_OPTIONS_SPECIAL_VALUES
+from .pipelines.pipeline_feature_special_values import REAL_SPECIAL_SET
+from .pipelines.pipeline_feature_special_values import FeatureSpecialValues
 from .pipelines.pipeline_homotopy import HTransform
-from .pipelines.pipeline_smallnans import SmallNans
 from .selectors.selector_first import feature_imp_selector
 from .selectors.selector_first import nan_constant_selector
 from .selectors.selector_last import Selector
@@ -45,10 +50,11 @@ logger = get_logger(__name__)
 SplitType = Optional[Union[np.ndarray, List[float], Dict[int, int]]]
 
 
-def get_monotonic_constr(task: TaskType, name: str, train: pd.DataFrame, target: str, spec_values: List[Any]):
+def get_monotonic_constr(task: TaskType, name: str, train: pd.DataFrame, target: str, spec_values: Optional[List[Any]]):
     """Check monotonic constraint."""
     df = train[[target, name]].dropna()
-    df = df.loc[~df[name].isin(spec_values)]
+    if spec_values is not None:
+        df = df.loc[~df[name].isin(spec_values)]
     try:
         if task == TaskType.BIN:
             auc = roc_auc_score(df[target].values, df[name].values)
@@ -59,15 +65,6 @@ def get_monotonic_constr(task: TaskType, name: str, train: pd.DataFrame, target:
 
     except (ValueError, TypeError, IndexError):
         return "0"
-
-
-SMALL_SET = {"__Small_0__", "__Small_maxfreq__", "__Small_maxp__", "__Small_minp__"}
-
-NAN_SET = {"__NaN_0__", "__NaN__", "__NaN_maxfreq__", "__NaN_maxp__", "__NaN_minp__"}
-
-SPEC_SET = {"__Spec_0__", "__Spec__", "__Spec_maxfreq__", "__Spec_maxp__", "__Spec_minp__"}
-
-SMALL_NAN_SPEC_SET = {*SMALL_SET, *NAN_SET, *SPEC_SET}
 
 
 class AutoWoE:
@@ -118,6 +115,8 @@ class AutoWoE:
             Threshold, which determines that WoE values are calculated to NaN.
         th_cat: int >= 0
             Threshold, which determines which categories are small.
+        th_mark: int >= 0
+            Threshold, which determines which group of marked values are small.
         woe_diff_th: float = 0.01
             The option to merge NaNs and rare categories with another bin,
             if the difference in WoE is less than woe_diff_th
@@ -139,6 +138,10 @@ class AutoWoE:
             Values - 'to_nan', 'to_woe_0', 'to_maxfreq', 'to_maxp', 'to_minp'
         nan_merge_to: str
             The way of WoE values filling on the test sample for real NaNs,
+            if they are not included in their group.
+            Values - 'to_woe_0', 'to_maxfreq', 'to_maxp', 'to_minp'
+        mark_merge_to: str
+            The way of WoE values filling on the test sample for 'markes`,
             if they are not included in their group.
             Values - 'to_woe_0', 'to_maxfreq', 'to_maxp', 'to_minp'
         oof_woe: bool
@@ -200,6 +203,7 @@ class AutoWoE:
         force_single_split: bool = False,
         th_nan: Union[int, float] = 0.005,
         th_cat: Union[int, float] = 0.005,
+        th_mark: Union[int, float] = 0.005,
         woe_diff_th: float = 0.01,
         min_bin_size: Union[int, float] = 0.01,
         min_bin_mults: Sequence[float] = (2, 4),
@@ -208,6 +212,7 @@ class AutoWoE:
         cat_alpha: float = 1,
         cat_merge_to: str = "to_woe_0",
         nan_merge_to: str = "to_woe_0",
+        mark_merge_to: str = "to_woe_0",
         oof_woe: bool = False,
         n_folds: int = 6,
         n_jobs: int = 10,
@@ -221,20 +226,18 @@ class AutoWoE:
         **kwargs,
     ):
         logger.setLevel(verbosity_to_loglevel(verbose))
-        assert cat_merge_to in [
-            "to_nan",
-            "to_woe_0",
-            "to_maxfreq",
-            "to_maxp",
-            "to_minp",
-        ], "Value for cat_merge_to is invalid. Valid are 'to_nan', 'to_small', 'to_woe_0', 'to_maxfreq', 'to_maxp', 'to_minp'"
 
-        assert nan_merge_to in [
-            "to_woe_0",
-            "to_maxfreq",
-            "to_maxp",
-            "to_minp",
-        ], "Value for nan_merge_to is invalid. Valid are 'to_woe_0', 'to_maxfreq', 'to_maxp', 'to_minp'"
+        assert (
+            nan_merge_to in DEFAULT_OPTIONS_SPECIAL_VALUES
+        ), "Value for nan_merge_to is invalid. Valid are [{}]".format(DEFAULT_OPTIONS_SPECIAL_VALUES)
+
+        assert (
+            cat_merge_to in EXTEND_OPTIONS_SPECIAL_VALUES
+        ), "Value for cat_merge_to is invalid. Valid are [{}]".format(EXTEND_OPTIONS_SPECIAL_VALUES)
+
+        assert (
+            mark_merge_to in EXTEND_OPTIONS_SPECIAL_VALUES
+        ), "Value for mari_merge_to is invalid. Valid are [{}]".format(EXTEND_OPTIONS_SPECIAL_VALUES)
 
         self._params = {
             "task": task,
@@ -253,6 +256,7 @@ class AutoWoE:
             "cat_alpha": cat_alpha,
             "cat_merge_to": cat_merge_to,
             "nan_merge_to": nan_merge_to,
+            "mark_merge_to": mark_merge_to,
             "oof_woe": oof_woe,
             "n_folds": n_folds,
             "n_jobs": n_jobs,
@@ -266,6 +270,7 @@ class AutoWoE:
             "th_const": th_const,
             "th_nan": th_nan,
             "th_cat": th_cat,
+            "th_mark": th_mark,
             "woe_diff_th": woe_diff_th,
             "min_bin_size": min_bin_size,
         }
@@ -348,7 +353,7 @@ class AutoWoE:
         group_kf: Hashable = None,
         max_bin_count: Optional[Dict[str, int]] = None,
         features_monotone_constraints: Optional[Dict[str, str]] = None,
-        features_special_values: Optional[Dict[str, List[Any]]] = None,
+        features_mark_values: Optional[Dict[str, Tuple[Any]]] = None,
     ):
         self.params = deepcopy(self._params)
 
@@ -374,7 +379,7 @@ class AutoWoE:
             }
         )
 
-        self._features_special_values = features_special_values
+        self._features_mark_values = features_mark_values
 
         # составим features_type
         self._features_type = features_type
@@ -405,7 +410,7 @@ class AutoWoE:
             val = self.features_monotone_constraints.get(col)
 
             if val in checklist:
-                new_val = get_monotonic_constr(self.params["task"], col, train, target_name)
+                new_val = get_monotonic_constr(self.params["task"], col, train, target_name, features_mark_values)
             elif val in ["0", 0, None]:
                 new_val = "0"
             else:
@@ -430,7 +435,7 @@ class AutoWoE:
         group_kf: Hashable = None,
         max_bin_count: Optional[Dict[str, int]] = None,
         features_monotone_constraints: Optional[Dict[str, str]] = None,
-        features_special_values: Optional[Dict[str, List[Any]]] = None,
+        features_mark_values: Optional[Dict[str, Tuple[Any]]] = None,
         validation: Optional[pd.DataFrame] = None,
     ):
         """Train model.
@@ -447,7 +452,7 @@ class AutoWoE:
                 "1" - the feature values monotonically increases when the target variable's value increases
                 "auto" - the feature values monotonically changes.
                 Not specified for categorical features.
-            features_special_values: Special values of feature which will be processed like `NaN` or small categories.
+            features_mark_values: Marked values of feature which will be processed like `NaN` or small categories.
             validation: Additional validation sample used for model selection. Currently supported:
                 - feature selection by p-value
 
@@ -459,11 +464,12 @@ class AutoWoE:
             group_kf,
             max_bin_count,
             features_monotone_constraints,
-            features_special_values,
+            features_mark_values,
         )
 
         if group_kf:
             group_kf = train[group_kf].values
+
         types_handler = TypesHandler(
             train=train,
             public_features_type=self._features_type,
@@ -514,13 +520,18 @@ class AutoWoE:
             process_num=self.params["n_jobs"],
         )
 
-        self._small_nans = SmallNans(
+        # Fill small group of category features, NaN-values by tags
+        self._features_special_values = FeatureSpecialValues(
             th_nan=self.params["th_nan"],
             th_cat=self.params["th_cat"],
             cat_merge_to=self.params["cat_merge_to"],
             nan_merge_to=self.params["nan_merge_to"],
-        )  # класс для обработки нанов
-        train_, spec_values = self._small_nans.fit_transform(train=train_, features_type=self.private_features_type)
+            mark_merge_to=self.params["mark_merge_to"],
+            marked_values=self._features_mark_values,
+        )
+        train_, spec_values = self._features_special_values.fit_transform(
+            train=train_, features_type=self.private_features_type
+        )
 
         self._cv_split = cv_split_f(train_, self.target, self.params["task"], group_kf, n_splits=self.params["n_folds"])
 
@@ -637,7 +648,7 @@ class AutoWoE:
         if np.issubdtype(train_df.dtypes[feature_name], np.number):
             nan_index = []
         else:
-            sn_set = SMALL_NAN_SPEC_SET if self.private_features_type[feature_name] == "cat" else NAN_SET
+            sn_set = CATEGORY_SPECIAL_SET if self.private_features_type[feature_name] == "cat" else REAL_SPECIAL_SET
             nan_index = train_df[feature_name].isin(sn_set)
             nan_index = np.where(nan_index.values)[0]
 
@@ -834,7 +845,7 @@ class AutoWoE:
         del types_handler
 
         woe_list = []
-        test_, spec_values = self._small_nans.transform(test_, feats)
+        test_, spec_values = self._features_special_values.transform(test_, feats)
         # здесь дебажный принт
         logger.debug(spec_values)
         for feature in feats:
@@ -969,4 +980,5 @@ class AutoWoE:
             nan_pattern_numbers,
             nan_pattern_category,
             preprocessing,
+            self._features_mark_values,
         )

@@ -114,11 +114,18 @@ class WoE:
         if self.target_type == TaskType.BIN:
             t_good, t_bad = t_stat
 
-        good_stats = total.loc[[x for x in total.index if type(x) in [int, float] or x in ["__Small__", "__NaN__"]]]
+        good_stats = total.loc[
+            [x for x in total.index if type(x) in [int, float] or x in ("__Marked__", "__Small__", "__NaN__")]
+        ]
 
         # первая обработка - мерджим близкие нуллы/категории
-        for key in [x for x in spec_values if "NaN" in x] + [x for x in spec_values if "Small" in x]:
-            if key in ["__Small__", "__NaN__"] and key in good_stats.index:
+        nsm_values = (
+            [x for x in spec_values if "NaN" in x]
+            + [x for x in spec_values if "Small" in x]
+            + [x for x in spec_values if "Mark" in x]
+        )
+        for key in nsm_values:
+            if key in ("__Marked__", "__Small__", "__NaN__") and key in good_stats.index:
 
                 check_row = good_stats.loc[key]
                 diff = (good_stats["woe"] - check_row["woe"]).abs()
@@ -133,41 +140,41 @@ class WoE:
                             good_stats.loc[idx, ["bad", "count_nonzero"]].sum(axis=0), t_good, t_bad
                         )
                         good_stats.loc[idx, "size"] = good_stats.loc[idx, "size"].sum()
+                        good_stats.loc[idx, "mean"] = good_stats.loc[idx, "count_nonzero"].sum() / good_stats["size"]
                     elif self.target_type == TaskType.REG:
                         gs = good_stats.loc[idx, ["woe", "size"]].copy()
                         t_gs_size = gs["size"].sum()
                         good_stats.loc[idx, "woe"] = (gs["woe"] * gs["size"]).sum() / t_gs_size
                         good_stats.loc[idx, "size"] = t_gs_size
+                        good_stats.loc[idx, "mean"] = good_stats.loc[idx, "woe"]
 
-                    good_stats.loc[idx, "mean"] = good_stats.loc[idx, "count_nonzero"].sum() / good_stats["size"]
-
-        # переписать
+        # TODO: re-right
         for key in good_stats.index.values:
             stat[key] = good_stats.loc[key, "woe"]
 
         # далее обработка нуллов и маленьких категорий
-        for key in [x for x in spec_values if "NaN" in x] + [x for x in spec_values if "Small" in x]:
+        for key in nsm_values:
 
             woe_val = None
 
-            if key in ["__Small_0__", "__NaN_0__"]:
+            if key in ("__Marked_0__", "__Small_0__", "__NaN_0__"):
                 woe_val = 0
 
-            elif key in ["__Small_maxfreq__", "__NaN_maxfreq__"]:
+            elif key in ("__Marked_maxfreq__", "__Small_maxfreq__", "__NaN_maxfreq__"):
                 idx = good_stats["size"].values.argmax()
                 woe_val = good_stats.iloc[idx]["woe"]
 
-            elif key in ["__Small_maxp__", "__NaN_maxp__"]:
+            elif key in ("__Marked_maxp", "__Small_maxp__", "__NaN_maxp__"):
                 # Отберем только тех, по кому что-то нормальное можно оценить
                 idx = good_stats["mean"].values.argmax()
                 woe_val = good_stats.iloc[idx]["woe"]
 
-            elif key in ["__Small_minp__", "__NaN_minp__"]:
+            elif key in ("Marked_minp__", "__Small_minp__", "__NaN_minp__"):
                 # Отберем только тех, по кому что-то нормальное можно оценить
                 idx = good_stats["mean"].values.argmin()
                 woe_val = good_stats.iloc[idx]["woe"]
 
-            elif key in ["__Small__", "__NaN__"]:
+            elif key in ("__Marked__", "__Small__", "__NaN__"):
                 continue
 
             stat[key] = woe_val

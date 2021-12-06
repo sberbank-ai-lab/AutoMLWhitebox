@@ -136,6 +136,7 @@ class ReportDeco:
         group_kf: Hashable = None,
         max_bin_count: Optional[Dict[str, int]] = None,
         features_monotone_constraints: Optional[Dict[str, str]] = None,
+        features_mark_values: Optional[Dict[str, List[Any]]] = None,
         validation: Optional[pd.DataFrame] = None,
         report_cols: Optional[List[str]] = None,
     ):
@@ -148,6 +149,7 @@ class ReportDeco:
             group_kf: Groups.
             max_bin_count: Maximum bin count.
             features_monotone_constraints: Dictionary with monotonic constraints for features.
+            features_mark_values: Marked values of feature which will be processed like `NaN` or small categories.
             validation: Validation dataset.
             report_cols: Report columns.
 
@@ -160,11 +162,12 @@ class ReportDeco:
         self._auto_woe.fit(
             train.drop(report_cols, axis=1),
             target_name,
-            features_type,
-            group_kf,
-            max_bin_count,
-            features_monotone_constraints,
-            validation,
+            features_type=features_type,
+            group_kf=group_kf,
+            max_bin_count=max_bin_count,
+            features_monotone_constraints=features_monotone_constraints,
+            features_mark_values=features_mark_values,
+            validation=validation,
         )
 
         self.__train = train

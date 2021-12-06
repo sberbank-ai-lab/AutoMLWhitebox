@@ -48,6 +48,8 @@ tox = "*"
 darglint = "^1.8.1"
 flake8-docstrings = "^1.6.0"
 isort = "5.7.0"
+jupyter-contrib-nbextensions = "^0.5.1"
+jupyter_nbextensions_configurator = "^0.4.1"
 
 [build-system]
 requires = ["poetry>=0.12"]
