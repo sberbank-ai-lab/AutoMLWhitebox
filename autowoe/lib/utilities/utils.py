@@ -12,6 +12,7 @@ from typing import Tuple
 from typing import Union
 
 import numpy as np
+import pandas as pd
 
 from strenum import StrEnum
 
@@ -120,8 +121,12 @@ def feature_changing(
     output, filter_features = func(*args, **kwargs)
     if isinstance(filter_features, dict):
         features_after = set(filter_features.keys())
-    else:
+    elif isinstance(filter_features, pd.Series):
+        features_after = set(filter_features.index)
+    elif isinstance(filter_features, Iterable):
         features_after = set(filter_features)
+    else:
+        raise RuntimeError("Can't extract features after function call.")
 
     features_diff = features_before - features_after
     for feature in features_diff:
