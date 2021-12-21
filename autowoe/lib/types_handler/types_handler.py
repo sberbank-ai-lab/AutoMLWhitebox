@@ -34,6 +34,7 @@ class TypesHandler:
         public_features_type:
         max_bin_count:
         features_monotone_constraints:
+        features_mark_values:
 
     """
 
@@ -43,6 +44,7 @@ class TypesHandler:
         public_features_type: Dict[Hashable, Any],
         max_bin_count: Dict[Hashable, Optional[int]] = None,
         features_monotone_constraints: Optional[dict] = None,
+        features_mark_values: Optional[dict] = None,
     ):
         self.__train = deepcopy(train)
         self.__public_features_type = deepcopy(public_features_type)

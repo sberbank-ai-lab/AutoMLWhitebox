@@ -1,23 +1,27 @@
 """SQL-query utilities."""
 
 from typing import Any
+from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import Union
 
 from autowoe.lib.pipelines.pipeline_feature_special_values import NAN_SET
 from autowoe.lib.pipelines.pipeline_feature_special_values import SMALL_SET
+from autowoe.lib.pipelines.pipeline_feature_special_values import is_mark_prefix
 from autowoe.lib.utilities.utils import TaskType
+from autowoe.lib.woe.woe import WoE
 
 
 def prepare_number(
-    woe_dict,
+    woe_dict: WoE,
     name: str,
     r_val: int = 3,
     round_features: int = 5,
     nan_pattern: str = "({0} IS NULL OR {0} = 'NaN')",
     preprocessing: Optional[str] = None,
-    marked_values: Optional[List[Union[int, float]]] = None,
+    mark_values: Optional[Dict[str, Tuple[Any]]] = None,
 ):
     """Get encoding case when for number.
 
@@ -28,14 +32,14 @@ def prepare_number(
         round_features: Numbers after the decimal point.
         nan_pattern: Expression for nan processing.
         preprocessing: Name preprocessing.
-        marked_values: List of marked values.
+        mark_values: List of marked values.
 
     Returns:
         sql query part for number.
 
     """
     # value in case
-    feature_marked_values = marked_values.get(name, None)
+    feature_mark_values = [] if mark_values is None else mark_values.get(name, [])
 
     f_val = name
     if preprocessing is not None:
@@ -52,14 +56,19 @@ def prepare_number(
     nan_case = nan_pattern.format(f_val)
     feature = """CASE\n  WHEN {0} THEN {1}\n""".format(nan_case, nan_val)
 
-    if feature_marked_values is not None:
-        for grp in woe_dict.cod_dict:
-            if type(grp) is str and grp.startswith("__Marked_"):
-                marked_val = round(woe_dict.cod_dict[grp], r_val)
-                break
+    # if feature_mark_values is not None:
+    #     for grp in woe_dict.cod_dict:
+    #         if type(grp) is str and grp.startswith("__Mark_"):
+    #             mark_val = round(woe_dict.cod_dict[grp], r_val)
+    #             break
 
-        marked_case = ", ".join(str(m) for m in feature_marked_values)
-        feature += """  WHEN {} IN ({}) THEN {}\n""".format(f_val, marked_case, marked_val)
+    #     mark_case = ", ".join(str(m) for m in feature_mark_values)
+    #     feature += """  WHEN {} IN ({}) THEN {}\n""".format(f_val, mark_case, mark_val)
+
+    for mv in feature_mark_values:
+        enc = "__Mark__{}__".format(mv)
+        enc_val = round(woe_dict.cod_dict[enc], r_val)
+        feature += """  WHEN {0} == {1} THEN {2}\n""".format(f_val, mv, enc_val)
 
     # create regular bins
     for grp, val in enumerate(woe_dict.split):
@@ -99,7 +108,7 @@ def prepare_category(
     r_val: int = 3,
     nan_pattern: str = "({0} IS NULL OR LOWER(CAST({0} AS VARCHAR(50))) = 'nan')",
     preprocessing: Optional[str] = None,
-    marked_values: Optional[List[Any]] = None,
+    mark_values: Optional[List[Any]] = None,
 ):
     """Get encoding case when for category.
 
@@ -109,20 +118,20 @@ def prepare_category(
         r_val: Numbers after the decimal point.
         nan_pattern: Expression for nan processing.
         preprocessing: Name preprocessing.
-        marked_values: List of marked values.
+        mark_values: List of mark values.
 
     Returns:
         sql query part for category.
 
     """
-    feature_marked_values = marked_values.get(name, None)
+    feature_mark_values = [] if mark_values is None else mark_values.get(name, [])
 
     # value in case
     f_val = name
     if preprocessing is not None:
         f_val = preprocessing.format(name)
 
-    # search for Marked, NaN and Small encodings
+    # search for Mark, NaN and Small encodings
     nan_val, small_val, small_grp = None, None, None
     for grp in woe_dict.split:
         if type(grp) is str:
@@ -134,9 +143,9 @@ def prepare_category(
                 small_grp = woe_dict.split[grp]
                 small_val = round(woe_dict.cod_dict[small_grp], r_val)
 
-            if grp.startswith("__Marked_"):
-                marked_grp = woe_dict.split[grp]
-                marked_val = round(woe_dict.cod_dict[marked_grp], r_val)
+            # if grp.startswith("__Mark_"):
+            #     mark_grp = woe_dict.split[grp]
+            #     mark_val = round(woe_dict.cod_dict[mark_grp], r_val)
 
     # search for small in cod_dict
     for grp in woe_dict.cod_dict:
@@ -148,31 +157,35 @@ def prepare_category(
                 small_grp = -1
 
     assert nan_val is not None, "NaN encoding value does not exists in woe_dict"
-    assert small_val is not None, "Small encoding value does not exists in woe_dict"
-    # TODO: assert for marked val
+    # assert small_val is not None, "Small encoding value does not exists in woe_dict"
+    # TODO: assert for mark val
 
     feature = """CASE\n"""
     if nan_val != small_val:
         nan_case = nan_pattern.format(f_val)
         feature += """  WHEN {0} THEN {1}\n""".format(nan_case, nan_val)
 
-    if feature_marked_values is not None:
-        marked_case = []
-        for m in feature_marked_values:
-            if isinstance(m, str):
-                fmt = "'{}'".format(m)
-            else:
-                fmt = str(m)
-            marked_case.append(fmt)
-        marked_case = ", ".join(marked_case)
-        feature += """  WHEN {} IN ({}) THEN {}\n""".format(f_val, marked_case, marked_val)
+    # if feature_mark_values is not None:
+    #     mark_case = []
+    #     for m in feature_mark_values:
+    #         if isinstance(m, str):
+    #             fmt = "'{}'".format(m)
+    #         else:
+    #             fmt = str(m)
+    #         mark_case.append(fmt)
+    #     mark_case = ", ".join(mark_case)
+    #     feature += """  WHEN {} IN ({}) THEN {}\n""".format(f_val, mark_case, mark_val)
 
     # create regular bins
     passed = {small_grp}
     for grp in woe_dict.split.values():
         if grp not in passed:
 
-            search_vals = [x for x in woe_dict.split if woe_dict.split[x] == grp and x not in {*SMALL_SET, *NAN_SET}]
+            search_vals = [
+                x
+                for x in woe_dict.split
+                if woe_dict.split[x] == grp and x not in {*SMALL_SET, *NAN_SET} and not is_mark_prefix(x)
+            ]
             length = len(search_vals)
             search_vals = list(map(check_cat_symb, search_vals))
 
@@ -184,6 +197,12 @@ def prepare_category(
                 feature += """  WHEN {0} = {1} THEN {2}\n""".format(f_val, search_vals[0], enc_val)
 
             passed.add(grp)
+
+    for mv in feature_mark_values:
+        enc = "__Mark__{}__".format(mv)
+        idx_enc = woe_dict.split[enc]
+        enc_val = round(woe_dict.cod_dict[idx_enc], r_val)
+        feature += """  WHEN {0} == {1} THEN {2}\n""".format(f_val, check_cat_symb(mv), enc_val)
 
     # create last ELSE with small
     feature += """  ELSE {1}\nEND AS {0}""".format(
@@ -221,7 +240,7 @@ def get_encoded_table(
     nan_pattern_numbers="({0} IS NULL OR {0} = 'NaN')",
     nan_pattern_category="({0} IS NULL OR LOWER(CAST({0} AS VARCHAR(50))) = 'nan')",
     preprocessing=None,
-    marked_values=None,
+    mark_values=None,
 ):
     """Get encoding table.
 
@@ -233,7 +252,7 @@ def get_encoded_table(
         nan_pattern_numbers: Expression for nan processing in number feature.
         nan_pattern_category: Expression for nan processing in category feature.
         preprocessing: Name processing.
-        marked_values: List of marked values.
+        mark_values: List of mark values.
 
     Returns:
         query.
@@ -253,11 +272,9 @@ def get_encoded_table(
             prep = preprocessing[name]
 
         if woe_dict.f_type == "cat":
-            feature = prepare_category(woe_dict, name, round_woe, nan_pattern_category, prep, marked_values)
+            feature = prepare_category(woe_dict, name, round_woe, nan_pattern_category, prep, mark_values)
         else:
-            feature = prepare_number(
-                woe_dict, name, round_woe, round_features, nan_pattern_numbers, prep, marked_values
-            )
+            feature = prepare_number(woe_dict, name, round_woe, round_features, nan_pattern_numbers, prep, mark_values)
 
         query += set_indent(feature)
 
@@ -330,7 +347,7 @@ def get_sql_inference_query(
     nan_pattern_numbers="({0} IS NULL OR {0} = 'NaN')",
     nan_pattern_category="({0} IS NULL OR LOWER(CAST({0} AS VARCHAR(50))) = 'nan')",
     preprocessing=None,
-    marked_values=None,
+    mark_values=None,
 ):
     """Get sql query.
 
@@ -346,7 +363,7 @@ def get_sql_inference_query(
         nan_pattern_numbers: Expression for nan processing in number feature.
         nan_pattern_category: Expression for nan processing in category feature.
         preprocessing: Name preprocessing.
-        marked_values: List of marked values.
+        mark_values: List of marked values.
 
     Returns:
         query.
@@ -368,7 +385,7 @@ def get_sql_inference_query(
             nan_pattern_numbers,
             nan_pattern_category,
             preprocessing,
-            marked_values,
+            mark_values,
         )
     )
     encode_table = """\n  """ + set_indent(encode_table)

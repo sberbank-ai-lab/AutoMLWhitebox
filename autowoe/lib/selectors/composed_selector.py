@@ -1,9 +1,11 @@
 """Compose several selector."""
 
 from copy import copy
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import TypeVar
 
 import numpy as np
@@ -41,17 +43,34 @@ class ComposedSelector:
         train: Train features.
         target: Train target.
         task: Task.
+        features_mark_values: Marked values of features.
 
     """
 
     default_metric_th = {TaskType.BIN: 0.5, TaskType.REG: 0.0}
 
-    def __init__(self, train: pd.DataFrame, target: pd.Series, task: TaskType):
+    def __init__(
+        self,
+        train: pd.DataFrame,
+        target: pd.Series,
+        task: TaskType,
+        features_mark_values: Optional[Dict[str, Tuple[Any]]],
+    ):
         self.train = train
         self.target = target
         self.task = task
+        self.features_mark_values = features_mark_values
         # precompute corrs
-        cc = np.abs(sp.corrcoef(train.values, rowvar=False))
+
+        if features_mark_values is not None:
+            mask_good_values = pd.Series([True] * train.shape[0])
+            for col, mvs in features_mark_values.items():
+                mask_good_values = mask_good_values & (~train[col].isin(mvs))
+        else:
+            mask_good_values = pd.Series([True] * train.shape[0], index=train.index)
+        train_values = train[mask_good_values].values
+
+        cc = np.abs(sp.corrcoef(train_values, rowvar=False))
         self.precomp_corr = pd.DataFrame(cc, index=train.columns, columns=train.columns)
 
         metrics = []

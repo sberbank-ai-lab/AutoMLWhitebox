@@ -305,6 +305,7 @@ class AutoWoE:
         self._threshold = 0.0
 
         self.feature_history = None
+        self._features_special_values: FeatureSpecialValues
 
     @property
     def features_type(self):  # noqa: D102
@@ -513,6 +514,7 @@ class AutoWoE:
             train_,
             self.params["task"],
             self.private_features_type,
+            features_mark_values,
             target_name,
             imp_th=self.params["imp_th"],
             imp_type=self.params["imp_type"],
@@ -527,7 +529,7 @@ class AutoWoE:
             cat_merge_to=self.params["cat_merge_to"],
             nan_merge_to=self.params["nan_merge_to"],
             mark_merge_to=self.params["mark_merge_to"],
-            marked_values=self._features_mark_values,
+            mark_values=self._features_mark_values,
         )
         train_, spec_values = self._features_special_values.fit_transform(
             train=train_, features_type=self.private_features_type
@@ -579,6 +581,7 @@ class AutoWoE:
             features_type=self.private_features_type,
             n_jobs=self.params["n_jobs"],
             cv_split=self._cv_split,
+            features_mark_values=features_mark_values,
         )
 
         best_features, self._sel_result = selector(
@@ -648,7 +651,15 @@ class AutoWoE:
         if np.issubdtype(train_df.dtypes[feature_name], np.number):
             nan_index = []
         else:
-            sn_set = CATEGORY_SPECIAL_SET if self.private_features_type[feature_name] == "cat" else REAL_SPECIAL_SET
+            sn_set = deepcopy(
+                CATEGORY_SPECIAL_SET if self.private_features_type[feature_name] == "cat" else REAL_SPECIAL_SET
+            )
+
+            if self._features_mark_values is not None and feature_name in self._features_mark_values:
+                if self.private_features_type[feature_name] != "cat":
+                    sn_set.remove("__Mark__")
+                sn_set = sn_set.union({"__Mark__{}__".format(val) for val in self._features_mark_values[feature_name]})
+
             nan_index = train_df[feature_name].isin(sn_set)
             nan_index = np.where(nan_index.values)[0]
 

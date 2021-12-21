@@ -10,6 +10,7 @@ import pandas as pd
 
 from pandas.core.frame import DataFrame
 
+from autowoe.lib.pipelines.pipeline_feature_special_values import is_mark_prefix
 from autowoe.lib.utilities.utils import TaskType
 
 
@@ -115,7 +116,7 @@ class WoE:
             t_good, t_bad = t_stat
 
         good_stats = total.loc[
-            [x for x in total.index if type(x) in [int, float] or x in ("__Marked__", "__Small__", "__NaN__")]
+            [x for x in total.index if type(x) in [int, float] or x in ("__Small__", "__NaN__") or is_mark_prefix(x)]
         ]
 
         # первая обработка - мерджим близкие нуллы/категории
@@ -125,7 +126,7 @@ class WoE:
             + [x for x in spec_values if "Mark" in x]
         )
         for key in nsm_values:
-            if key in ("__Marked__", "__Small__", "__NaN__") and key in good_stats.index:
+            if (key in ("__Small__", "__NaN__") or is_mark_prefix(key)) and key in good_stats.index:
 
                 check_row = good_stats.loc[key]
                 diff = (good_stats["woe"] - check_row["woe"]).abs()
@@ -157,24 +158,24 @@ class WoE:
 
             woe_val = None
 
-            if key in ("__Marked_0__", "__Small_0__", "__NaN_0__"):
+            if key in ("__Mark_0__", "__Small_0__", "__NaN_0__"):
                 woe_val = 0
 
-            elif key in ("__Marked_maxfreq__", "__Small_maxfreq__", "__NaN_maxfreq__"):
+            elif key in ("__Mark_maxfreq__", "__Small_maxfreq__", "__NaN_maxfreq__"):
                 idx = good_stats["size"].values.argmax()
                 woe_val = good_stats.iloc[idx]["woe"]
 
-            elif key in ("__Marked_maxp", "__Small_maxp__", "__NaN_maxp__"):
+            elif key in ("__Mark_maxp", "__Small_maxp__", "__NaN_maxp__"):
                 # Отберем только тех, по кому что-то нормальное можно оценить
                 idx = good_stats["mean"].values.argmax()
                 woe_val = good_stats.iloc[idx]["woe"]
 
-            elif key in ("Marked_minp__", "__Small_minp__", "__NaN_minp__"):
+            elif key in ("__Mark_minp__", "__Small_minp__", "__NaN_minp__"):
                 # Отберем только тех, по кому что-то нормальное можно оценить
                 idx = good_stats["mean"].values.argmin()
                 woe_val = good_stats.iloc[idx]["woe"]
 
-            elif key in ("__Marked__", "__Small__", "__NaN__"):
+            elif key in ("__Small__", "__NaN__") or is_mark_prefix(key):
                 continue
 
             stat[key] = woe_val

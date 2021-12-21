@@ -1,7 +1,9 @@
 """Post-selection."""
 
+from typing import Any
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
@@ -30,7 +32,7 @@ class Selector:
         features_type: Features types.
         n_jobs: Number of threads.
         cv_split: Cross-Val splits.
-
+        features_mark_values:
     """
 
     def __init__(
@@ -42,10 +44,11 @@ class Selector:
         features_type: Dict[str, str],
         n_jobs: int,
         cv_split: Dict[int, Tuple[List[int], List[int]]],
+        features_mark_values: Optional[Dict[str, Tuple[Any]]],
     ):
 
         self.__features_fit = list(features_type.keys())
-        self.__pearson_selector = ComposedSelector(train, target, task)
+        self.__pearson_selector = ComposedSelector(train, target, task, features_mark_values)
         self.__main_selector = L1(
             task, train=train, target=target, interpreted_model=interpreted_model, n_jobs=n_jobs, cv_split=cv_split
         )

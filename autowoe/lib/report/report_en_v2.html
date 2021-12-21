@@ -125,10 +125,10 @@
                     <h3 class="caret" id="section1_1">1.1. Purpose of the Document</h3>
                     <ul class="nested">
                         <p>This report is made to ensure the continuity of business processes, preserve and
-							share internal organization expertise within the Group, as well as to prove the feasibility
-							and validity of the developed model.</p>
+                            share internal organization expertise within the Group, as well as to prove the feasibility
+                            and validity of the developed model.</p>
                         <p>To achieve the goals, the Report provides insights into some essential methodological
-							approaches to modeling.</p>
+                            approaches to modeling.</p>
                     </ul>
                 </li>
                 <li>
@@ -144,7 +144,7 @@
                     <ul class="nested">
                         <p>The report has the following structure:</p>
                         <ul style="list-style-type:disc;">
-                            <li>Section <a href="#section2">Model parameters</a> contains model description:
+                            <li>Section <a href="#section2">Model structure</a> contains model description:
                                 features,
                                 coefficients of the regression model, splitting features into bins.
                             </li>
@@ -290,10 +290,12 @@
             <h2 class="caret caret-down" id="section3">3. Validation Tests</h2>
             <ul class="nested active">
                 <li>
-                    <h3 class="caret" id="section3_1">3.1. Differences in the Number of Missing Values between Training and Test Sets
+                    <h3 class="caret" id="section3_1">3.1. Differences in the Number of Missing Values between Training
+                        and Test Sets
                     </h3>
                     <ul class="nested">
-                        <p>Statistics related to the number of missing values between training and test sets are shown in Table 5.</p>
+                        <p>Statistics related to the number of missing values between training and test sets are shown
+                            in Table 5.</p>
                         <h4>Table 5. Missing values</h4>
                         <table style="width:100%">
                             <tr>
@@ -343,8 +345,10 @@
                     <ul class="nested">
                         <span>95% confidence interval for Gini index:</span>
                         <ul>
-                            <li>- In the <strong>training</strong> set: <strong>({{ train_gini_confint[0] }}, {{ train_gini_confint[1] }})</strong></li>
-                            <li>- In the <strong>test</strong> set: <strong>({{ test_gini_confint[0] }}, {{ test_gini_confint[1] }})</strong></li>
+                            <li>- In the <strong>training</strong> set: <strong>({{ train_gini_confint[0] }}, {{
+                                    train_gini_confint[1] }})</strong></li>
+                            <li>- In the <strong>test</strong> set: <strong>({{ test_gini_confint[0] }}, {{
+                                    test_gini_confint[1] }})</strong></li>
                         </ul>
                     </ul>
                 </li>
@@ -610,24 +614,30 @@
                             </tr>
                             {% endfor %}
                         </table>
-                        <br/>
+                        <br />
                         <span>Missing values processing legend:</span>
                         <ul>
                             <li><strong>__NaN__</strong> - separate group with WoE evaluation</li>
                             <li><strong>__NaN_0__</strong> - separate group with WoE = 0</li>
-                            <li><strong>__NaN_maxfreq__</strong> - added to the most frequent group without WoE evaluation</li>
-                            <li><strong>__NaN_maxp__</strong> - added to the group with maximum probability without WoE evaluation</li>
-                            <li><strong>__NaN_minp__</strong> - added to the group with minimum probability without WoE evaluation</li>
+                            <li><strong>__NaN_maxfreq__</strong> - added to the most frequent group without WoE
+                                evaluation</li>
+                            <li><strong>__NaN_maxp__</strong> - added to the group with maximum probability without WoE
+                                evaluation</li>
+                            <li><strong>__NaN_minp__</strong> - added to the group with minimum probability without WoE
+                                evaluation</li>
                         </ul>
-                        <br/>
+                        <br />
                         <span>Rare/unknown category processing legend:</span>
                         <ul>
                             <li><strong>__Small__</strong> - separate group with WoE evaluation</li>
                             <li><strong>__Small_nan__</strong> - to the NaN group</li>
                             <li><strong>__Small_0__</strong> - separate group with WoE = 0</li>
-                            <li><strong>__Small_maxfreq__</strong> - added to the most frequent group without WoE evaluation</li>
-                            <li><strong>__Small_maxp__</strong> - added to the group with maximum probability without WoE evaluation</li>
-                            <li><strong>__Small_minp__</strong> - added to the group with minimum probability without WoE evaluation</li>
+                            <li><strong>__Small_maxfreq__</strong> - added to the most frequent group without WoE
+                                evaluation</li>
+                            <li><strong>__Small_maxp__</strong> - added to the group with maximum probability without
+                                WoE evaluation</li>
+                            <li><strong>__Small_minp__</strong> - added to the group with minimum probability without
+                                WoE evaluation</li>
                         </ul>
                     </ul>
                 </li>

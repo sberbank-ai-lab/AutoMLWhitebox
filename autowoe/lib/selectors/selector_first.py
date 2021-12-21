@@ -3,8 +3,10 @@
 import logging
 
 from copy import deepcopy
+from typing import Any
 from typing import Dict
 from typing import Hashable
+from typing import Optional
 from typing import Tuple
 from typing import Union
 
@@ -86,6 +88,7 @@ def feature_imp_selector(
     data: DataFrame,
     task: TaskType,
     features_type: Dict[Hashable, str],
+    features_mark_values: Optional[Dict[str, Tuple[Any]]],
     target_name: Hashable,
     imp_th: float,
     imp_type: str,
@@ -102,6 +105,7 @@ def feature_imp_selector(
         data: Dataset.
         task: Task.
         features_type: Features types.
+        features_mark_values: Marked values of feature.
         target_name: Target column name.
         imp_th: Importance threshold.
         imp_type: Importance type ("feature_imp" -- feature_importances, "perm_imp" -- permutation_importances).
@@ -115,6 +119,10 @@ def feature_imp_selector(
 
     """
     data_ = deepcopy(data)
+
+    if features_mark_values:
+        for col, mvs in features_mark_values.items():
+            data_ = data_[~data_[col].isin(mvs)]
 
     categorical_feature = [key for key in features_type if features_type[key] == "cat"]
     if categorical_feature:
