@@ -65,7 +65,8 @@ class ComposedSelector:
         if features_mark_values is not None:
             mask_good_values = pd.Series([True] * train.shape[0])
             for col, mvs in features_mark_values.items():
-                mask_good_values = mask_good_values & (~train[col].isin(mvs))
+                if col in train.columns:
+                    mask_good_values = mask_good_values & (~train[col].isin(mvs))
         else:
             mask_good_values = pd.Series([True] * train.shape[0], index=train.index)
         train_values = train[mask_good_values].values

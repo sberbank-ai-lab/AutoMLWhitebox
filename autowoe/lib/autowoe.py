@@ -992,4 +992,5 @@ class AutoWoE:
             nan_pattern_category,
             preprocessing,
             self._features_mark_values,
+            self._features_special_values.mark_encoding,
         )

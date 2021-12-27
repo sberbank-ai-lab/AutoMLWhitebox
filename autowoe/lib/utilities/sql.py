@@ -22,6 +22,7 @@ def prepare_number(
     nan_pattern: str = "({0} IS NULL OR {0} = 'NaN')",
     preprocessing: Optional[str] = None,
     mark_values: Optional[Dict[str, Tuple[Any]]] = None,
+    mark_encoding: Optional[Dict[Any, str]] = None,
 ):
     """Get encoding case when for number.
 
@@ -33,6 +34,7 @@ def prepare_number(
         nan_pattern: Expression for nan processing.
         preprocessing: Name preprocessing.
         mark_values: List of marked values.
+        mark_encoding: Map marked value to code.
 
     Returns:
         sql query part for number.
@@ -66,7 +68,8 @@ def prepare_number(
     #     feature += """  WHEN {} IN ({}) THEN {}\n""".format(f_val, mark_case, mark_val)
 
     for mv in feature_mark_values:
-        enc = "__Mark__{}__".format(mv)
+        # enc = "__Mark__{}__".format(mv)
+        enc = mark_encoding[name][mv]
         enc_val = round(woe_dict.cod_dict[enc], r_val)
         feature += """  WHEN {0} == {1} THEN {2}\n""".format(f_val, mv, enc_val)
 
@@ -108,7 +111,8 @@ def prepare_category(
     r_val: int = 3,
     nan_pattern: str = "({0} IS NULL OR LOWER(CAST({0} AS VARCHAR(50))) = 'nan')",
     preprocessing: Optional[str] = None,
-    mark_values: Optional[List[Any]] = None,
+    mark_values: Optional[Dict[str, List[Any]]] = None,
+    mark_encoding: Optional[Dict[Any, str]] = None,
 ):
     """Get encoding case when for category.
 
@@ -119,6 +123,7 @@ def prepare_category(
         nan_pattern: Expression for nan processing.
         preprocessing: Name preprocessing.
         mark_values: List of mark values.
+        mark_encoding: Map marked value to code.
 
     Returns:
         sql query part for category.
@@ -199,7 +204,8 @@ def prepare_category(
             passed.add(grp)
 
     for mv in feature_mark_values:
-        enc = "__Mark__{}__".format(mv)
+        # enc = "__Mark__{}__".format(mv)
+        enc = mark_encoding[name][mv]
         idx_enc = woe_dict.split[enc]
         enc_val = round(woe_dict.cod_dict[idx_enc], r_val)
         feature += """  WHEN {0} == {1} THEN {2}\n""".format(f_val, check_cat_symb(mv), enc_val)
@@ -241,6 +247,7 @@ def get_encoded_table(
     nan_pattern_category="({0} IS NULL OR LOWER(CAST({0} AS VARCHAR(50))) = 'nan')",
     preprocessing=None,
     mark_values=None,
+    mark_encoding=None,
 ):
     """Get encoding table.
 
@@ -253,6 +260,7 @@ def get_encoded_table(
         nan_pattern_category: Expression for nan processing in category feature.
         preprocessing: Name processing.
         mark_values: List of mark values.
+        mark_encoding: Map marked value to code.
 
     Returns:
         query.
@@ -272,9 +280,13 @@ def get_encoded_table(
             prep = preprocessing[name]
 
         if woe_dict.f_type == "cat":
-            feature = prepare_category(woe_dict, name, round_woe, nan_pattern_category, prep, mark_values)
+            feature = prepare_category(
+                woe_dict, name, round_woe, nan_pattern_category, prep, mark_values, mark_encoding
+            )
         else:
-            feature = prepare_number(woe_dict, name, round_woe, round_features, nan_pattern_numbers, prep, mark_values)
+            feature = prepare_number(
+                woe_dict, name, round_woe, round_features, nan_pattern_numbers, prep, mark_values, mark_encoding
+            )
 
         query += set_indent(feature)
 
@@ -348,6 +360,7 @@ def get_sql_inference_query(
     nan_pattern_category="({0} IS NULL OR LOWER(CAST({0} AS VARCHAR(50))) = 'nan')",
     preprocessing=None,
     mark_values=None,
+    mark_encoding=None,
 ):
     """Get sql query.
 
@@ -364,6 +377,7 @@ def get_sql_inference_query(
         nan_pattern_category: Expression for nan processing in category feature.
         preprocessing: Name preprocessing.
         mark_values: List of marked values.
+        mark_encoding: Map marked value to code.
 
     Returns:
         query.
@@ -386,6 +400,7 @@ def get_sql_inference_query(
             nan_pattern_category,
             preprocessing,
             mark_values,
+            mark_encoding,
         )
     )
     encode_table = """\n  """ + set_indent(encode_table)

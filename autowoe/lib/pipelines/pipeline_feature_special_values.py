@@ -149,8 +149,8 @@ class FeatureSpecialValues:
                     enc_type_t = enc_type + "{}__".format(mv) if enc_type == "__Mark__" else enc_type
                     train_.loc[train_[col] == mv, col] = enc_type_t
                     mark_encoding[col][mv] = enc_type_t
-                    if self._features_type[col] != "cat":
-                        d[enc_type_t] = fill_val
+                    # if self._features_type[col] != "cat":
+                    d[enc_type_t] = fill_val
             else:
                 mark_values_mask = pd.Series(data=[False] * train_.shape[0], index=train_.index)
 
