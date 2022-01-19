@@ -4,7 +4,6 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import Any
 from typing import Dict
-from typing import Final
 from typing import Hashable
 from typing import Optional
 from typing import Set
@@ -30,20 +29,20 @@ def _values(d: Dict[TKey, TValue]) -> Set[TValue]:
     return {v for _, v in d.items()}
 
 
-DEFAULT_OPTIONS_SPECIAL_VALUES: Final[Set[str]] = {"to_woe_0", "to_maxfreq", "to_minp", "to_maxp"}
-EXTEND_OPTIONS_SPECIAL_VALUES: Final[Set[str]] = {*DEFAULT_OPTIONS_SPECIAL_VALUES, "to_nan"}
+DEFAULT_OPTIONS_SPECIAL_VALUES: Set[str] = {"to_woe_0", "to_maxfreq", "to_minp", "to_maxp"}
+EXTEND_OPTIONS_SPECIAL_VALUES: Set[str] = {*DEFAULT_OPTIONS_SPECIAL_VALUES, "to_nan"}
 
-NAN_MERGE_CASES: Final = _opt2val("NaN", DEFAULT_OPTIONS_SPECIAL_VALUES)
-SMALL_MERGE_CASES: Final = _opt2val("Small", EXTEND_OPTIONS_SPECIAL_VALUES)
-MARK_MERGE_CASES: Final = _opt2val("Mark", EXTEND_OPTIONS_SPECIAL_VALUES)
+NAN_MERGE_CASES = _opt2val("NaN", DEFAULT_OPTIONS_SPECIAL_VALUES)
+SMALL_MERGE_CASES = _opt2val("Small", EXTEND_OPTIONS_SPECIAL_VALUES)
+MARK_MERGE_CASES = _opt2val("Mark", EXTEND_OPTIONS_SPECIAL_VALUES)
 
 
-NAN_SET: Final = {*_values(NAN_MERGE_CASES), "__NaN__"}
-SMALL_SET: Final = {*_values(SMALL_MERGE_CASES), "__Small__"}
-MARK_SET: Final = {*_values(MARK_MERGE_CASES), "__Mark__"}
+NAN_SET = {*_values(NAN_MERGE_CASES), "__NaN__"}
+SMALL_SET = {*_values(SMALL_MERGE_CASES), "__Small__"}
+MARK_SET = {*_values(MARK_MERGE_CASES), "__Mark__"}
 
-CATEGORY_SPECIAL_SET: Final = {*SMALL_SET, *NAN_SET, *MARK_SET} - {"__NaN__", "__Small__", "__Mark__"}
-REAL_SPECIAL_SET: Final = {*NAN_SET, *MARK_SET}  # - {"__NaN__", "__Small__", "__Mark__"}
+CATEGORY_SPECIAL_SET = {*SMALL_SET, *NAN_SET, *MARK_SET} - {"__NaN__", "__Small__", "__Mark__"}
+REAL_SPECIAL_SET = {*NAN_SET, *MARK_SET}  # - {"__NaN__", "__Small__", "__Mark__"}
 
 
 def is_mark_prefix(s):

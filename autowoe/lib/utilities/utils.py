@@ -6,7 +6,6 @@ from typing import Callable
 from typing import Dict
 from typing import Hashable
 from typing import Iterable
-from typing import Literal
 from typing import Set
 from typing import Tuple
 from typing import Union
@@ -65,7 +64,6 @@ def flatten(d: dict, parent_key: str = "", sep: str = "_"):
     return dict(items)
 
 
-# Literal["BIN", "REG"]
 def get_task_type(values: np.ndarray) -> TaskType:
     """Determine task type.
 
@@ -78,7 +76,7 @@ def get_task_type(values: np.ndarray) -> TaskType:
     """
     n_unique_values = np.unique(values).shape[0]
 
-    task: Literal["BIN", "REG"]
+    task: str
     if n_unique_values == 1:
         raise RuntimeError("Only unique value in target")
     elif n_unique_values == 2:
