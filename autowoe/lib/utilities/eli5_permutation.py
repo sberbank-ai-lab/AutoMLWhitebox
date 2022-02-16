@@ -1,6 +1,9 @@
 # module was taken from eli5 lib as is
 # this was made to simplify dependencies
-"""
+# flake8: noqa
+
+"""ELI5 library.
+
 A module for computing feature importances by measuring how score decreases
 when a feature is not available. It contains basic building blocks;
 there is a full-featured sklearn-compatible implementation
@@ -10,18 +13,24 @@ A similar method is described in Breiman, "Random Forests", Machine Learning,
 https://www.stat.berkeley.edu/%7Ebreiman/randomforest2001.pdf), with an
 application to random forests. It is known in literature as
 "Mean Decrease Accuracy (MDA)" or "permutation importance".
+
 """
+
 from __future__ import absolute_import
-from typing import Tuple, List, Callable, Any
+
+from typing import Any
+from typing import Callable
+from typing import List
+from typing import Tuple
 
 import numpy as np
+
 from sklearn.utils import check_random_state
 
 
-def iter_shuffled(X, columns_to_shuffle=None, pre_shuffle=False,
-                  random_state=None):
-    """
-    Return an iterator of X matrices which have one or more columns shuffled.
+def iter_shuffled(X, columns_to_shuffle=None, pre_shuffle=False, random_state=None):
+    """Return an iterator of X matrices which have one or more columns shuffled.
+
     After each iteration yielded matrix is mutated inplace, so
     if you want to use multiple of them at the same time, make copies.
     ``columns_to_shuffle`` is a sequence of column numbers to shuffle.
@@ -31,6 +40,10 @@ def iter_shuffled(X, columns_to_shuffle=None, pre_shuffle=False,
     result takes shuffled columns from this copy. If it is False,
     columns are shuffled on fly. ``pre_shuffle = True`` can be faster
     if there is a lot of columns, or if columns are used multiple times.
+
+    # noqa: DAR101
+    # noqa: DAR301
+
     """
     rng = check_random_state(random_state)
 
@@ -52,17 +65,16 @@ def iter_shuffled(X, columns_to_shuffle=None, pre_shuffle=False,
 
 
 def get_score_importances(
-        score_func,  # type: Callable[[Any, Any], float]
-        X,
-        y,
-        n_iter=5,  # type: int
-        columns_to_shuffle=None,
-        random_state=None
+    score_func,  # type: Callable[[Any, Any], float]
+    X,
+    y,
+    n_iter=5,  # type: int
+    columns_to_shuffle=None,
+    random_state=None,
 ):
     # type: (...) -> Tuple[float, List[np.ndarray]]
-    """
-    Return ``(base_score, score_decreases)`` tuple with the base score and
-    score decreases when a feature is not available.
+    """Return ``(base_score, score_decreases)`` tuple with the base score and score decreases when a feature is not available.
+
     ``base_score`` is ``score_func(X, y)``; ``score_decreases``
     is a list of length ``n_iter`` with feature importance arrays
     (each array is of shape ``n_features``); feature importances are computed
@@ -74,20 +86,21 @@ def get_score_importances(
         from eli5.permutation_importance import get_score_importances
         base_score, score_decreases = get_score_importances(score_func, X, y)
         feature_importances = np.mean(score_decreases, axis=0)
+
+    # noqa: DAR301
+    # noqa: DAR101
+    # noqa: DAR201
+
     """
     rng = check_random_state(random_state)
     base_score = score_func(X, y)
     scores_decreases = []
     for i in range(n_iter):
-        scores_shuffled = _get_scores_shufled(
-            score_func, X, y, columns_to_shuffle=columns_to_shuffle,
-            random_state=rng
-        )
+        scores_shuffled = _get_scores_shufled(score_func, X, y, columns_to_shuffle=columns_to_shuffle, random_state=rng)
         scores_decreases.append(-scores_shuffled + base_score)
     return base_score, scores_decreases
 
 
-def _get_scores_shufled(score_func, X, y, columns_to_shuffle=None,
-                        random_state=None):
+def _get_scores_shufled(score_func, X, y, columns_to_shuffle=None, random_state=None):
     Xs = iter_shuffled(X, columns_to_shuffle, random_state=random_state)
     return np.array([score_func(X_shuffled, y) for X_shuffled in Xs])

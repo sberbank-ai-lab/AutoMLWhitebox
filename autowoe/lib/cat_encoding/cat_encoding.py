@@ -1,38 +1,41 @@
+# noqa: D100
+
 from copy import deepcopy
-from typing import Dict, List, Union
+from typing import Dict
+from typing import List
+from typing import Union
 
 import numpy as np
 import pandas as pd
 
 
 class CatEncoding:
-    """
-    Class for categorical data converting/reconverting to float values
+    """Class for categorical data converting/reconverting to float values.
+
+    Args:
+        data: Data for encoding. First column - feature, second - target.
+
     """
 
     def __init__(self, data: pd.DataFrame):
-        """
-
-        Args:
-            data: Данные для кодирования. I колонка - признак, II - таргет
-        """
         self.data = data
         self.col = data.columns
 
         self.data_info = pd.DataFrame(index=data.index, columns=[self.col[0], "mean_enc"])
         self.data_info[self.col[0]] = self.data[self.col[0]].values
 
-    def __call__(self, cv_index_split: Dict[int, List[int]], nan_index: np.array,
-                 cat_alpha: float = 1.) -> pd.DataFrame:
-        """
-        Mean_target encoding на кросс-валидации
+    def __call__(
+        self, cv_index_split: Dict[int, List[int]], nan_index: np.array, cat_alpha: float = 1.0
+    ) -> pd.DataFrame:
+        """Mean_target encoding by cross-val.
 
         Args:
-            cv_index_split:
-            nan_index:
-            cat_alpha:
+            cv_index_split: CV indexes.
+            nan_index: Indexes of nan-values.
+            cat_alpha: Smooth coefficient alpha.
 
         Returns:
+            Encoded values.
 
         """
         cv_index_split_ = deepcopy(cv_index_split)
@@ -43,8 +46,8 @@ class CatEncoding:
             train_index, test_index = np.setdiff1d(train_index, nan_index), np.setdiff1d(test_index, nan_index)
 
             data_sl = self.data.iloc[train_index]
-            d_agg = data_sl.groupby(feature)[target].agg(['sum', 'count'])
-            d_agg = (d_agg['sum'] + cat_alpha * data_sl[target].mean()) / (d_agg['count'] + cat_alpha)
+            d_agg = data_sl.groupby(feature)[target].agg(["sum", "count"])
+            d_agg = (d_agg["sum"] + cat_alpha * data_sl[target].mean()) / (d_agg["count"] + cat_alpha)
 
             d_agg = d_agg.to_dict()
             self.data_info.iloc[test_index, 1] = self.data_info.iloc[test_index, 0].map(d_agg)
@@ -54,15 +57,15 @@ class CatEncoding:
         return train_f
 
     def mean_target_reverse(self, split: Union[List[float], np.ndarray]) -> Dict[int, int]:
-        """
-        Обратная к операция к mean_target_encoding.
-        По заданному split определяет категории.
-        Должна быть запущена только после __call__
+        """Reverse mean-target.
+
+        Should be run after '__call__'
 
         Args:
-            split:
+            split: Splits.
 
         Returns:
+            Mapping.
 
         """
         df = self.data_info.copy()
