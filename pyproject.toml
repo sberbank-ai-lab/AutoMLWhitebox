@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "AutoWoE"
-version = "1.2.5"
+version = "1.3.0"
 description = "Library for automatic interpretable model building (Whitebox AutoML)"
 authors = ["Vakhrushev Anton <AGVakhrushev@sberbank.ru>"]
 readme = "README.md"
@@ -24,7 +24,7 @@ python = "^3.6.1"
 numpy = "*"
 scipy = "*"
 pandas = "*"
-scikit-learn = "<1.0.0"
+scikit-learn = "*"
 lightgbm = "*"
 sphinx = "*"
 sphinx-rtd-theme = "*"

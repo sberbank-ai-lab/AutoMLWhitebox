@@ -824,7 +824,7 @@ class AutoWoE:
 
         return result, features_fit
 
-    def test_encoding(self, test: pd.DataFrame, feats: Optional[List[str]] = None) -> pd.DataFrame:
+    def test_encoding(self, test: pd.DataFrame, feats: Optional[List[str]] = None, bins: bool = False) -> pd.DataFrame:
         """Encode a test dataset based on WoE estimates.
 
         Args:
@@ -857,10 +857,13 @@ class AutoWoE:
 
         woe_list = []
         test_, spec_values = self._features_special_values.transform(test_, feats)
-        # здесь дебажный принт
+        
         logger.debug(spec_values)
         for feature in feats:
-            df_cod = self.woe_dict[feature].transform(test_[feature], spec_values[feature])
+            if bins:
+                df_cod = self.woe_dict[feature].split_feature(test_[feature], spec_values[feature])
+            else:
+                df_cod = self.woe_dict[feature].transform(test_[feature], spec_values[feature])
             woe_list.append(df_cod)
 
         test_tr = pd.concat(woe_list, axis=1)
@@ -884,7 +887,7 @@ class AutoWoE:
         if self.params["task"] == TaskType.BIN:
             prediction = (lin_pred >= self._threshold).astype(np.int32)
         else:
-            prediction = self._target_scaler.inverse_transform(lin_pred)
+            prediction = self._target_scaler.inverse_transform(lin_pred.reshape(-1, 1))[:, 0]
 
         return prediction
 

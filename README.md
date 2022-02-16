@@ -6,7 +6,7 @@
 
 This is the repository for **AutoWoE** library, developed by Sber AI Lab AutoML group. This library can be used for automatic creation of interpretable ML model based on feature binning, WoE features transformation, feature selection and Logistic Regression.
 
-**Authors:** Vakhrushev Anton, Grigorii Penkin
+**Authors:** Vakhrushev Anton, Grigorii Penkin, Alexander Kirilin
 
 **Library setup** can be done by one of three scenarios below:
 
