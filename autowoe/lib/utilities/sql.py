@@ -7,6 +7,7 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
+from autowoe.lib.pipelines.pipeline_feature_special_values import MARK_SET
 from autowoe.lib.pipelines.pipeline_feature_special_values import NAN_SET
 from autowoe.lib.pipelines.pipeline_feature_special_values import SMALL_SET
 from autowoe.lib.pipelines.pipeline_feature_special_values import is_mark_prefix
@@ -67,16 +68,17 @@ def prepare_number(
     #     mark_case = ", ".join(str(m) for m in feature_mark_values)
     #     feature += """  WHEN {} IN ({}) THEN {}\n""".format(f_val, mark_case, mark_val)
 
+    # create regular bins
+    for grp, val in enumerate(woe_dict.split):
+        enc_val = round(woe_dict.cod_dict[grp], r_val)
+        feature += """  WHEN {0} <= {1} THEN {2}\n""".format(f_val, round(val, round_features), enc_val)
+
     for mv in feature_mark_values:
         # enc = "__Mark__{}__".format(mv)
         enc = mark_encoding[name][mv]
         enc_val = round(woe_dict.cod_dict[enc], r_val)
         feature += """  WHEN {0} == {1} THEN {2}\n""".format(f_val, mv, enc_val)
 
-    # create regular bins
-    for grp, val in enumerate(woe_dict.split):
-        enc_val = round(woe_dict.cod_dict[grp], r_val)
-        feature += """  WHEN {0} <= {1} THEN {2}\n""".format(f_val, round(val, round_features), enc_val)
     # create last else val
     enc_val = round(woe_dict.cod_dict[len(woe_dict.split)], r_val)
     feature += """  ELSE {1}\nEND AS {0}""".format(
@@ -189,7 +191,7 @@ def prepare_category(
             search_vals = [
                 x
                 for x in woe_dict.split
-                if woe_dict.split[x] == grp and x not in {*SMALL_SET, *NAN_SET} and not is_mark_prefix(x)
+                if woe_dict.split[x] == grp and x not in {*SMALL_SET, *NAN_SET, *MARK_SET} and not is_mark_prefix(x)
             ]
             length = len(search_vals)
             search_vals = list(map(check_cat_symb, search_vals))
@@ -199,7 +201,7 @@ def prepare_category(
             if length > 1:
                 feature += """  WHEN {0} IN ({1}) THEN {2}\n""".format(f_val, ", ".join(search_vals), enc_val)
             elif length == 1:
-                feature += """  WHEN {0} = {1} THEN {2}\n""".format(f_val, search_vals[0], enc_val)
+                feature += """  WHEN {0} == {1} THEN {2}\n""".format(f_val, search_vals[0], enc_val)
 
             passed.add(grp)
 
