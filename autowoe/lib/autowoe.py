@@ -294,7 +294,7 @@ class AutoWoE:
         self.clf = None  # модель лог регрессии
         self.features_fit = None  # Признаки, которые прошли проверку Selector + информация о лучшей итерации Result
         self._cv_split = None  # Словарь с индексами разбиения на train и test
-        self._small_nans = None
+        # self._small_nans = None
 
         self._private_features_type = None
         self._public_features_type = None
@@ -830,6 +830,7 @@ class AutoWoE:
         Args:
             test: Test dataset.
             feats: List of features.
+            bins: Use bins.
 
         Returns:
             Features encoding.
@@ -857,7 +858,7 @@ class AutoWoE:
 
         woe_list = []
         test_, spec_values = self._features_special_values.transform(test_, feats)
-        
+
         logger.debug(spec_values)
         for feature in feats:
             if bins:
@@ -932,7 +933,7 @@ class AutoWoE:
                 feature_data["splits"] = [0 + round(float(x), 6) for x in woe.split]
             else:
                 feature_data["cat_map"] = {str(k): int(v) for k, v in woe.split.items()}
-                spec_vals = self._small_nans.cat_encoding[feature]
+                spec_vals = self._features_special_values.cat_encoding[feature]
                 feature_data["spec_cat"] = (spec_vals[0], spec_vals[2])
 
             feature_data["cod_dict"] = {
@@ -940,8 +941,11 @@ class AutoWoE:
             }
 
             feature_data["weight"] = float(self.features_fit[feature])
-            feature_data["nan_value"] = self._small_nans.all_encoding[feature]
+            feature_data["nan_value"] = self._features_special_values.all_encoding[feature]
             feature_data["spec_cod"] = {k: (0 + round(float(v), 6)) for k, v in woe.cod_dict.items() if type(k) is str}
+            if self._features_mark_values is not None and feature in self._features_mark_values:
+                feature_data["mark_values"] = self._features_mark_values[feature]
+                feature_data["mark_encoding"] = self._features_special_values.mark_encoding[feature]
 
             result[feature] = feature_data
 
